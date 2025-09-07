@@ -1,0 +1,610 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4 text-gray-800">ALM Dashboard</h1>
+            
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+            
+            <!-- Filter Section -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Filter by FIC MIS Date</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="dateFilterForm" class="row align-items-end">
+                        <div class="col-md-3 mb-2">
+                            <label for="manual_date" class="form-label small text-muted">Manual Date Entry:</label>
+                            <input type="date" 
+                                   class="form-control form-control-sm" 
+                                   id="manual_date" 
+                                   name="fic_mis_date" 
+                                   value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="quick_select" class="form-label small text-muted">Quick Select:</label>
+                            <select class="form-control form-control-sm" id="quick_select" onchange="updateManualDate()">
+                                <option value="">-- Select Date --</option>
+                                {% for date in available_dates %}
+                                    <option value="{{ date|date:'Y-m-d' }}" 
+                                            {% if selected_date and date == selected_date %}selected{% endif %}>
+                                        {{ date|date:'Y-m-d' }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-2 text-right">
+                            <button type="submit" class="btn btn-primary btn-sm mr-2">
+                                <i class="fas fa-filter"></i> Apply Filter
+                            </button>
+                            <a href="{% url 'alm_app:dashboard' %}" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-times"></i> Clear Filter
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Overview Cards (Staging Data Only) -->
+            <div class="row">
+                <!-- Loan Contracts Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Loan Contracts
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_loan_contracts|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-file-contract fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Overdrafts Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Overdrafts
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_overdraft_contracts|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Investments Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Investments
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_investments|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- First Day Products Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        First Day Products
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_first_day_products|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Credit Lines Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-dark shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                                        Credit Lines
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_credit_lines|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-money-check-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Exchange Rates Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-secondary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                        Exchange Rates
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_exchange_rates|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Report Tables Summary by Product Type and Currency -->
+            {% if report_summaries %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Report Tables Summary by Product Type & Currency
+                        <small class="text-muted">(Dynamically loaded from database)</small>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Base Report Tables -->
+                    {% if report_summaries.base_reports %}
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold text-primary mb-3">
+                            <i class="fas fa-table"></i> Base Report Tables
+                            <span class="badge badge-primary">{{ report_summaries.base_reports|length }}</span>
+                        </h6>
+                        {% for report in report_summaries.base_reports %}
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar-alt text-primary"></i>
+                                    {{ report.table_info.formatted_date }} - {{ report.table_info.table_name }}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% if report.product_summary %}
+                                    {% for product_type, product_data in report.product_summary.items %}
+                                    <div class="mb-3">
+                                        <h6 class="text-primary">
+                                            <i class="fas fa-box"></i> {{ product_type }}
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Total Records: <strong>{{ product_data.total_records|default:0 }}</strong></small><br>
+                                                <small class="text-muted">Total Amount: <strong>${{ product_data.total_amount|default:0|floatformat:2 }}</strong></small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">By Currency:</small>
+                                                {% if product_data.currencies %}
+                                                    {% for currency, curr_data in product_data.currencies.items %}
+                                                        <div class="ml-2">
+                                                            <span class="badge badge-secondary">{{ currency }}</span>
+                                                            {{ curr_data.count|default:0 }} records, ${{ curr_data.amount|default:0|floatformat:2 }}
+                                                        </div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="ml-2 text-muted">No currency data available</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if not forloop.last %}<hr>{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        No data available{% if report.error %} - {{ report.error }}{% endif %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Behavioral Report Tables -->
+                    {% if report_summaries.behavioral_reports %}
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold text-success mb-3">
+                            <i class="fas fa-chart-line"></i> Behavioral Report Tables
+                            <span class="badge badge-success">{{ report_summaries.behavioral_reports|length }}</span>
+                        </h6>
+                        {% for report in report_summaries.behavioral_reports %}
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar-alt text-success"></i>
+                                    {{ report.table_info.formatted_date }} - {{ report.table_info.table_name }}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% if report.product_summary %}
+                                    {% for product_type, product_data in report.product_summary.items %}
+                                    <div class="mb-3">
+                                        <h6 class="text-success">
+                                            <i class="fas fa-box"></i> {{ product_type }}
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Total Records: <strong>{{ product_data.total_records|default:0 }}</strong></small><br>
+                                                <small class="text-muted">Total Amount: <strong>${{ product_data.total_amount|default:0|floatformat:2 }}</strong></small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">By Currency:</small>
+                                                {% if product_data.currencies %}
+                                                    {% for currency, curr_data in product_data.currencies.items %}
+                                                        <div class="ml-2">
+                                                            <span class="badge badge-secondary">{{ currency }}</span>
+                                                            {{ curr_data.count|default:0 }} records, ${{ curr_data.amount|default:0|floatformat:2 }}
+                                                        </div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="ml-2 text-muted">No currency data available</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if not forloop.last %}<hr>{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        No data available{% if report.error %} - {{ report.error }}{% endif %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Consolidated Report Tables -->
+                    {% if report_summaries.cons_reports %}
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold text-info mb-3">
+                            <i class="fas fa-layer-group"></i> Consolidated Report Tables
+                            <span class="badge badge-info">{{ report_summaries.cons_reports|length }}</span>
+                        </h6>
+                        {% for report in report_summaries.cons_reports %}
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar-alt text-info"></i>
+                                    {{ report.table_info.formatted_date }} - {{ report.table_info.table_name }}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% if report.product_summary %}
+                                    {% for product_type, product_data in report.product_summary.items %}
+                                    <div class="mb-3">
+                                        <h6 class="text-info">
+                                            <i class="fas fa-box"></i> {{ product_type }}
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Total Records: <strong>{{ product_data.total_records|default:0 }}</strong></small><br>
+                                                <small class="text-muted">Total Amount: <strong>${{ product_data.total_amount|default:0|floatformat:2 }}</strong></small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">By Currency:</small>
+                                                {% if product_data.currencies %}
+                                                    {% for currency, curr_data in product_data.currencies.items %}
+                                                        <div class="ml-2">
+                                                            <span class="badge badge-secondary">{{ currency }}</span>
+                                                            {{ curr_data.count|default:0 }} records, ${{ curr_data.amount|default:0|floatformat:2 }}
+                                                        </div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="ml-2 text-muted">No currency data available</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if not forloop.last %}<hr>{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        No data available{% if report.error %} - {{ report.error }}{% endif %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Rate Sensitive Report Tables -->
+                    {% if report_summaries.rate_reports %}
+                    <div class="mb-4">
+                        <h6 class="font-weight-bold text-warning mb-3">
+                            <i class="fas fa-percentage"></i> Rate Sensitive Report Tables
+                            <span class="badge badge-warning">{{ report_summaries.rate_reports|length }}</span>
+                        </h6>
+                        {% for report in report_summaries.rate_reports %}
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar-alt text-warning"></i>
+                                    {{ report.table_info.formatted_date }} - {{ report.table_info.table_name }}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% if report.product_summary %}
+                                    {% for product_type, product_data in report.product_summary.items %}
+                                    <div class="mb-3">
+                                        <h6 class="text-warning">
+                                            <i class="fas fa-box"></i> {{ product_type }}
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Total Records: <strong>{{ product_data.total_records|default:0 }}</strong></small><br>
+                                                <small class="text-muted">Total Amount: <strong>${{ product_data.total_amount|default:0|floatformat:2 }}</strong></small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">By Currency:</small>
+                                                {% if product_data.currencies %}
+                                                    {% for currency, curr_data in product_data.currencies.items %}
+                                                        <div class="ml-2">
+                                                            <span class="badge badge-secondary">{{ currency }}</span>
+                                                            {{ curr_data.count|default:0 }} records, ${{ curr_data.amount|default:0|floatformat:2 }}
+                                                        </div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="ml-2 text-muted">No currency data available</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if not forloop.last %}<hr>{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        No data available{% if report.error %} - {{ report.error }}{% endif %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- No Report Tables Message -->
+                    {% if not report_summaries.base_reports and not report_summaries.behavioral_reports and not report_summaries.cons_reports and not report_summaries.rate_reports %}
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i>
+                        No report tables found in the database. Report tables will appear here once they are generated.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if report_tables_error %}
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {{ report_tables_error }}
+                </div>
+            {% endif %}
+            
+            <!-- Staging Data Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Staging Data Summary by FIC MIS Date
+                        {% if selected_date %}
+                            <small class="text-muted">(Filtered by: {{ selected_date|date:'Y-m-d' }})</small>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if dashboard_data %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>FIC MIS Date</th>
+                                        <th>Loan Contracts</th>
+                                        <th>Overdrafts</th>
+                                        <th>Investments</th>
+                                        <th>First Day Products</th>
+                                        <th>Credit Lines</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for data in dashboard_data %}
+                                    <tr {% if selected_date and data.fic_mis_date == selected_date %}class="table-primary"{% endif %}>
+                                        <td class="font-weight-bold">{{ data.fic_mis_date|date:'Y-m-d' }}</td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.loan_contracts.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.loan_contracts.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.overdraft_contracts.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.overdraft_contracts.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.investments.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.investments.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.first_day_products.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.first_day_products.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.credit_lines.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.credit_lines.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No staging data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Exchange Rate Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Exchange Rate Summary (Last 5 Dates)</h6>
+                </div>
+                <div class="card-body">
+                    {% if exchange_rate_summary %}
+                        {% for rate_data in exchange_rate_summary %}
+                            <div class="mb-3">
+                                <h6 class="font-weight-bold">{{ rate_data.fic_mis_date|date:'Y-m-d' }} 
+                                    <small class="text-muted">({{ rate_data.total_rates }} rates)</small>
+                                </h6>
+                                {% if rate_data.rates %}
+                                    <div class="row">
+                                        {% for rate in rate_data.rates %}
+                                            <div class="col-md-3 mb-2">
+                                                <div class="card card-body p-2 bg-light">
+                                                    <small>
+                                                        <strong>{{ rate.v_from_ccy_code }} → {{ rate.v_to_ccy_code }}</strong><br>
+                                                        Rate: {{ rate.n_exchange_rate|floatformat:4 }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted small">No exchange rates available for this date.</p>
+                                {% endif %}
+                            </div>
+                            {% if not forloop.last %}<hr>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No exchange rate data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateManualDate() {
+    const quickSelect = document.getElementById('quick_select');
+    const manualDate = document.getElementById('manual_date');
+    if (quickSelect.value) {
+        manualDate.value = quickSelect.value;
+    }
+}
+
+// Auto-submit form when manual date changes
+document.getElementById('manual_date').addEventListener('change', function() {
+    const quickSelect = document.getElementById('quick_select');
+    quickSelect.value = this.value;
+});
+</script>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.table-responsive {
+    border-radius: 0.35rem;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.form-control-sm {
+    font-size: 0.875rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.text-xs {
+    font-size: 0.7rem;
+}
+
+@media (max-width: 768px) {
+    .col-md-6.text-right {
+        text-align: left !important;
+        margin-top: 1rem;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

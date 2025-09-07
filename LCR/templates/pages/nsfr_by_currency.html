@@ -1,0 +1,64 @@
+{% extends "base/base.html" %}
+{% load tailwind_tags %}
+
+{% block content %}
+<div class="py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+  <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+
+    <h1 class="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Net Stable Funding Ratio (NSFR)</h1>
+
+    <form method="get" class="mb-6 flex items-center space-x-4">
+      <label for="reporting_date" class="font-medium text-gray-700 dark:text-gray-300">
+        Reporting Date:
+      </label>
+      <select name="reporting_date" id="reporting_date" required
+              class="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
+                     text-gray-900 dark:text-gray-200 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="" disabled {% if not selected_date %}selected{% endif %}>—- Select Date —</option>
+        {% for d in reporting_dates %}
+          <option value="{{ d|date:'Y-m-d' }}"
+            {% if selected_date and d == selected_date %}selected{% endif %}>
+            {{ d|date:"F j, Y" }}
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition">
+        Calculate NSFR
+      </button>
+    </form>
+
+    {% if error %}
+      <p class="text-red-600">{{ error }}</p>
+    {% endif %}
+
+    {% if nsfr_data %}
+      <table class="w-full table-auto text-sm">
+        <thead>
+          <tr class="bg-gray-100 dark:bg-gray-700">
+            <th class="px-4 py-2 text-left">Currency</th>
+            <th class="px-4 py-2 text-right">ASF</th>
+            <th class="px-4 py-2 text-right">RSF</th>
+            <th class="px-4 py-2 text-right">NSFR (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in nsfr_data %}
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+              <td class="px-4 py-2">{{ row.currency }}</td>
+              <td class="px-4 py-2 text-right">{{ row.asf }}</td>
+              <td class="px-4 py-2 text-right">{{ row.rsf }}</td>
+              <td class="px-4 py-2 text-right">
+                {% if row.nsfr != None %}{{ row.nsfr }}{% else %}&mdash;{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% elif selected_date %}
+      <p class="text-gray-700 dark:text-gray-300">No NSFR data for {{ selected_date|date:"F j, Y" }}.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

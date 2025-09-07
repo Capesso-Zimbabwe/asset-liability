@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block layout %}
+{% if request.user.is_authenticated and request.resolver_match.url_name == 'login' %}
+    <script>window.location.href = "{% url 'alm_app:dashboard' %}";</script>
+{% else %}
+    <div class="d-flex min-vh-100 align-items-center justify-content-center" style="background-color: #f8f9fa;">
+        <div class="w-100" style="max-width: 400px;">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4">
+                    {% block auth_content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

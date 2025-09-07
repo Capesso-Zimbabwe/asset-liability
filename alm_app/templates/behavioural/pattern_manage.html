@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <div class="mb-4 d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h3 fw-bold text-dark mb-1">{% if is_edit %}Edit{% else %}Add{% endif %} Product & Bucket Splits</h1>
+            <p class="text-muted small mb-0">Manage the product and all its bucket percentages on one page</p>
+        </div>
+        <a href="{% url 'alm_app:pattern-list' %}" class="btn btn-outline-secondary">Back</a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+            {% if message.tags != 'success' %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" id="patternManageForm">
+                {% csrf_token %}
+
+                <!-- Product Details Section -->
+                <div class="mb-4">
+                    <h6 class="text-muted text-uppercase small mb-3">Product Details</h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Product Type <span class="text-danger">*</span></label>
+                            {{ form.v_prod_type }}
+                            {% if form.v_prod_type.errors %}
+                            <div class="text-danger small mt-1">{% for e in form.v_prod_type.errors %}<div>{{ e }}</div>{% endfor %}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="text-danger small mt-1">{% for e in form.description.errors %}<div>{{ e }}</div>{% endfor %}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Tip: The total percentage must be 100% across all buckets.</div>
+                </div>
+
+                <!-- Bucket Splits Section -->
+                <div class="mb-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted text-uppercase small mb-0">Bucket Splits</h6>
+                        <div class="small">Total: <span id="totalPct" class="badge bg-secondary">0%</span></div>
+                    </div>
+
+                    {{ formset.management_form }}
+                    <div class="table-responsive border rounded">
+                        <table class="table align-middle mb-0" id="splitsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 20%">Bucket #</th>
+                                    <th style="width: 30%">Percentage</th>
+                                    <th style="width: 15%" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="splitsBody">
+                                {% for f in formset %}
+                                <tr class="split-row" {% if f.instance.pk %}data-existing="1"{% endif %}>
+                                    {{ f.id }}
+                                    <td>
+                                        {{ f.bucket_number }}
+                                        {% if f.bucket_number.errors %}
+                                        <div class="text-danger small">{% for e in f.bucket_number.errors %}<div>{{ e }}</div>{% endfor %}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ f.percentage }}
+                                        {% if f.percentage.errors %}
+                                        <div class="text-danger small">{% for e in f.percentage.errors %}<div>{{ e }}</div>{% endfor %}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if formset.can_delete %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-row">Remove</button>
+                                            <div class="d-none">{{ f.DELETE }}</div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button type="button" id="addSplitBtn" class="btn btn-sm btn-outline-secondary mt-2">Add Split</button>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <a href="{% url 'alm_app:pattern-list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    <span id="saveBtnWrapper" class="tooltip-wrapper" title="Total must equal 100% to save.">
+                        <button type="submit" id="saveBtn" class="btn" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';" disabled>Save</button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    #splitsTable input.form-control, #splitsTable select.form-select { height: 2.2rem; padding: 0.25rem 0.5rem; }
+    #splitsTable td, #splitsTable th { vertical-align: middle; }
+    /* Compact, auto-growing description */
+    #id_description {
+        min-height: 2.25rem;
+        max-height: 240px;
+        overflow-y: auto;
+        resize: none;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.95rem;
+        line-height: 1.3;
+    }
+    .tooltip-wrapper { display: inline-block; cursor: not-allowed; }
+    .tooltip-wrapper:has(> button:not([disabled])) { cursor: default; }
+</style>
+
+<script>
+(function(){
+    const body = document.getElementById('splitsBody');
+    const totalEl = document.getElementById('totalPct');
+    const addBtn = document.getElementById('addSplitBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const saveWrap = document.getElementById('saveBtnWrapper');
+
+    function recalcTotal(){
+        let total = 0;
+        body.querySelectorAll('tr.split-row').forEach(row => {
+            if (row.classList.contains('removed')) return;
+            const inp = row.querySelector('input[name$="-percentage"]');
+            const v = parseFloat(inp && inp.value);
+            if (!isNaN(v)) total += v;
+        });
+        const rounded = Math.round(total * 100) / 100;
+        totalEl.textContent = rounded + '%';
+        totalEl.classList.remove('bg-secondary','bg-success','bg-danger');
+        if (rounded > 100) {
+            totalEl.classList.add('bg-danger');
+        } else if (rounded === 100) {
+            totalEl.classList.add('bg-success');
+        } else {
+            totalEl.classList.add('bg-secondary');
+        }
+        const canSave = rounded === 100;
+        saveBtn.disabled = !canSave;
+        if (!canSave) {
+            const reason = rounded < 100 ? `Total is ${rounded}%. It must be 100% to save.` : `Total is ${rounded}%. Reduce to 100% to save.`;
+            saveWrap.setAttribute('title', reason);
+            saveWrap.style.pointerEvents = 'auto';
+        } else {
+            saveWrap.setAttribute('title', '');
+            saveWrap.style.pointerEvents = 'auto';
+        }
+    }
+
+    function getMaxExistingBucket(){
+        let maxVal = 0;
+        body.querySelectorAll('tr.split-row').forEach(row => {
+            if (row.classList.contains('removed')) return;
+            const isExisting = row.hasAttribute('data-existing');
+            const b = row.querySelector('input[name$="-bucket_number"]');
+            const val = parseInt(b && b.value, 10);
+            if (isExisting && !isNaN(val)) {
+                maxVal = Math.max(maxVal, val);
+            }
+        });
+        return maxVal;
+    }
+
+    function reindexRows(){
+        const hasExisting = body.querySelector('tr.split-row[data-existing]') !== null;
+        if (!hasExisting) {
+            // No existing rows (create flow) – sequentially number all
+            let idx = 1;
+            body.querySelectorAll('tr.split-row').forEach(row => {
+                if (row.classList.contains('removed')) return;
+                const b = row.querySelector('input[name$="-bucket_number"]');
+                if (b){ b.value = idx; b.readOnly = true; }
+                idx += 1;
+            });
+            return;
+        }
+        // Edit flow – only number new rows after max existing
+        const start = getMaxExistingBucket();
+        let offset = 1;
+        body.querySelectorAll('tr.split-row[data-new]')?.forEach(row => {
+            if (row.classList.contains('removed')) return;
+            const b = row.querySelector('input[name$="-bucket_number"]');
+            if (b){ b.value = start + offset; b.readOnly = true; }
+            offset += 1;
+        });
+    }
+
+    function hookPercentageInputs(scope){
+        (scope || body).querySelectorAll('input[name$="-percentage"]').forEach(inp => {
+            inp.addEventListener('input', recalcTotal);
+        });
+    }
+
+    function hookRemoveButtons(scope){
+        (scope || body).querySelectorAll('.remove-row').forEach(btn => {
+            btn.addEventListener('click', function(){
+                const row = this.closest('tr');
+                const deleteInput = row.querySelector('input[name$="-DELETE"]');
+                if (deleteInput){
+                    deleteInput.checked = true;
+                }
+                row.classList.add('removed');
+                row.style.display = 'none';
+                reindexRows();
+                recalcTotal();
+            });
+        });
+    }
+
+    function addRow(){
+        const totalForms = document.querySelector('input[name="{{ formset.prefix }}-TOTAL_FORMS"]');
+        const idx = parseInt(totalForms.value, 10);
+        const rowHtml = `
+<tr class="split-row" data-new>
+  <td>
+    <input type="number" name="{{ formset.prefix }}-${idx}-bucket_number" class="form-control" min="1" readonly />
+  </td>
+  <td>
+    <input type="number" step="0.01" name="{{ formset.prefix }}-${idx}-percentage" class="form-control" min="0" />
+  </td>
+  <td class="text-end">
+    <button type="button" class="btn btn-sm btn-outline-danger remove-row">Remove</button>
+    <div class="d-none"><input type="checkbox" name="{{ formset.prefix }}-${idx}-DELETE" /></div>
+  </td>
+</tr>`;
+        body.insertAdjacentHTML('beforeend', rowHtml);
+        totalForms.value = idx + 1;
+        const newRow = body.lastElementChild;
+        reindexRows();
+        hookPercentageInputs(newRow);
+        hookRemoveButtons(newRow);
+        recalcTotal();
+    }
+
+    // Auto-grow description
+    function autoGrowTextarea(el){
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 240) + 'px';
+    }
+    const desc = document.getElementById('id_description');
+    if (desc){
+        autoGrowTextarea(desc);
+        desc.addEventListener('input', () => autoGrowTextarea(desc));
+    }
+
+    // Initial setup
+    reindexRows();
+    hookPercentageInputs();
+    hookRemoveButtons();
+    recalcTotal();
+
+    if (addBtn){
+        addBtn.addEventListener('click', addRow);
+    }
+})();
+</script>
+{% endblock %} 

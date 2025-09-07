@@ -1,0 +1,155 @@
+{% extends "base/base.html" %}
+{% load tailwind_tags %}
+
+{% block content %}
+<div class="py-8 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
+  <div class=" bg-white p-6 rounded-lg shadow">
+
+    {% if messages %}
+      <div class="mb-4 space-y-2" role="region" aria-live="polite" aria-atomic="true">
+        {% for message in messages %}
+          <div class="px-4 py-2 rounded
+                      {% if 'success' in message.tags %} bg-green-100 text-green-800
+                      {% elif 'error' in message.tags or 'danger' in message.tags %} bg-red-100 text-red-800
+                      {% elif 'warning' in message.tags %} bg-yellow-100 text-yellow-800
+                      {% else %} bg-gray-100 text-gray-800 {% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-base font-semibold text-gray-900">
+        Configurations – Sections & Items
+      </h1>
+
+      <form method="get" class="flex items-center space-x-2 text-sm">
+        <label for="entity" class="text-gray-700">Entity:</label>
+        <select id="entity" name="entity"
+                class="text-sm border border-gray-300 bg-white text-gray-900 rounded-md px-2 py-1">
+          {% for key, label in entities %}
+            <option value="{{ key }}" {% if key == entity_key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit"
+                class="px-3 py-1 rounded text-sm bg-[#171426] hover:bg-[#695404] text-white">
+          Load
+        </button>
+      </form>
+    </div>
+
+    <h2 class="text-sm font-medium mb-4 text-gray-900">
+      {{ entity_label }}
+    </h2>
+
+    <div class="overflow-auto border border-gray-300 rounded">
+      <table class="min-w-full text-sm">
+        <thead class="sticky top-0 z-10">
+          <tr class="bg-[#171426] text-white">
+            {% for header in table_headers %}
+              <th scope="col" class="px-3 py-2 border-b border-gray-300 text-left font-medium">
+                {{ header }}
+              </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% if is_section_entity %}
+            {% for group in grouped_data %}
+              {% for item in group.items %}
+                <tr class="border-t border-gray-200 hover:bg-gray-50">
+                  {% if forloop.first %}
+                    <td scope="row"
+                        class="px-3 py-2 border-r border-gray-300 text-center font-semibold bg-gray-50"
+                        rowspan="{{ group.count }}">
+                      {{ group.group_value }}
+                    </td>
+                  {% endif %}
+
+                  {% for field_name in display_fields %}
+                    {% if field_name != group_field %}
+                      <td class="px-3 py-2 border-r last:border-r-0 border-gray-300">
+                        {% if field_name == 'section_name' %}
+                          {{ item.section_name|default:"-" }}
+                        {% elif field_name == 'weight' %}
+                          {{ item.weight|default:"-" }}
+                        {% elif field_name == 'runoff_rate' %}
+                          {{ item.runoff_rate|default:"-" }}
+                        {% elif field_name == 'parent' %}
+                          {{ item.parent.section_name|default:"-" }}
+                        {% elif field_name == 'level' %}
+                          {{ item.level|default:"-" }}
+                        {% elif field_name == 'category' %}
+                          {{ item.category|default:"-" }}
+                        {% endif %}
+                      </td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            {% empty %}
+              <tr>
+                <td colspan="{{ table_headers|length }}" class="px-3 py-6 text-center text-gray-500">
+                  No sections to display.
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            {% for group in grouped_data %}
+              {% for item in group.items %}
+                <tr class="border-t border-gray-200 hover:bg-gray-50">
+                  {% if forloop.first %}
+                    <td scope="row" class="px-3 py-2 border-r border-gray-300 font-semibold bg-gray-50"
+                        rowspan="{{ group.count }}">
+                      {{ group.group_value }}
+                    </td>
+                  {% endif %}
+
+                  {% for field_name in display_fields %}
+                    {% if field_name != 'section' %}
+                      <td class="px-3 py-2 border-r last:border-r-0 border-gray-300">
+                        {% if field_name == 'item_name' %}
+                          {{ item.item_name|default:"-" }}
+                        {% elif field_name == 'weight' %}
+                          {{ item.weight|default:"-" }}
+                        {% endif %}
+                      </td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            {% empty %}
+              <tr>
+                <td colspan="{{ table_headers|length }}" class="px-3 py-6 text-center text-gray-500">
+                  No items to display.
+                </td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-6 flex justify-end">
+      <a href="?entity={{ entity_key }}&mode=edit"
+         class="px-6 py-2 rounded bg-[#171426] hover:bg-[#695404] text-white font-medium transition-colors duration-200">
+        Edit {{ entity_label }}
+      </a>
+    </div>
+
+    <div class="mt-6 text-xs text-gray-600">
+      <p><strong>{{ entity_label }}</strong> — Read-only view showing hierarchical structure</p>
+      <ul class="list-disc list-inside mt-2">
+        <li>Use the selector above to switch between different configuration types</li>
+        <li>Click "Edit" to modify the configuration values</li>
+        {% if is_section_entity %}
+          <li>Sections are grouped by <strong>{{ group_header_label }}</strong> with merged cells for better readability</li>
+        {% else %}
+          <li>Items are grouped by their parent section with merged cells</li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

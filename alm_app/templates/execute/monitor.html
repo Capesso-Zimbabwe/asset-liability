@@ -1,0 +1,939 @@
+{% extends 'base.html' %}
+
+{% block title %}Pipeline Monitor{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-sm mb-4">
+        <!-- Header -->
+        <div class="card-header border-bottom d-flex justify-content-between align-items-center">
+          <h6 class="h5 fw-semibold text-dark mb-0">Pipeline Execution Monitor</h6>
+          <div>
+            <a href="{% url 'alm_app:execute_view' %}" class="btn btn-outline-primary btn-sm me-2">New Pipeline</a>
+            <a href="{% url 'alm_app:execution_history' %}" class="btn btn-outline-secondary btn-sm">View History</a>
+          </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="card-body border-bottom bg-light py-3">
+          <form method="get" class="row g-3 align-items-end" id="searchForm">
+            <div class="col-md-4">
+              <label for="fic_mis_date" class="form-label small text-muted mb-1">Execution Date</label>
+              <input type="date" 
+                     class="form-control form-control-sm" 
+                     id="fic_mis_date" 
+                     name="fic_mis_date" 
+                     value="{{ fic_mis_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-4">
+              <label for="run_number" class="form-label small text-muted mb-1">Run Number</label>
+              <input type="number" 
+                     class="form-control form-control-sm" 
+                     id="run_number" 
+                     name="run_number" 
+                     value="{{ run_number }}"
+                     min="1"
+                     placeholder="Enter run number">
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn  btn-sm me-2" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                <i class="fas fa-search me-1"></i> Search
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSearch()">
+                <i class="fas fa-times me-1"></i> Clear
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="card-body">
+          {% if error %}
+          <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i> {{ error }}
+          </div>
+          {% endif %}
+
+          {% if search_error %}
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i> {{ search_error }}
+          </div>
+          {% endif %}
+
+          {% if no_executions %}
+          <div class="alert alert-info">
+            <p class="mb-0">No pipeline executions found. <a href="{% url 'alm_app:execute_view' %}" class="alert-link">Start a new pipeline</a> to see execution progress.</p>
+          </div>
+          {% else %}
+            {% if viewing_execution %}
+            <!-- Execution Details View -->
+            <div class="execution-details">
+              <!-- Back Button -->
+              <div class="mb-4">
+                <button class="btn btn-outline-secondary btn-sm" onclick="clearSearch()">
+                  <i class="fas fa-arrow-left me-1"></i> Back to Recent Executions
+                </button>
+              </div>
+
+              <!-- Execution Header -->
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                  <h4 class="h5 fw-medium text-dark mb-1">
+                    Execution Details: {{ fic_mis_date|date:"Y-m-d" }}
+                  </h4>
+                  <p class="text-muted mb-0">Run #{{ run_number }}</p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                  <!-- Control Buttons -->
+                  <div class="btn-group">
+                    {% if is_running %}
+                    <button type="button" 
+                            class="btn btn-warning btn-sm" 
+                            onclick="stopExecution('{{ fic_mis_date|date:'Y-m-d' }}', '{{ run_number }}')"
+                            id="stopBtn">
+                      <i class="fas fa-stop me-1"></i> Stop Execution
+                    </button>
+                    {% endif %}
+                    
+                    {% if can_continue %}
+                    <button type="button" 
+                            class="btn btn-primary btn-sm" 
+                            onclick="continueExecution('{{ fic_mis_date|date:'Y-m-d' }}', '{{ run_number }}')"
+                            id="continueBtn"
+                            title="Continue from: {{ resume_from }}">
+                      <i class="fas fa-play me-1"></i> Continue from {{ resume_from }}
+                    </button>
+                    {% endif %}
+                  </div>
+
+                  <!-- Status Indicators -->
+                  <div class="d-flex align-items-center">
+                    <div class="me-4">
+                      <span class="text-muted">Total Time:</span>
+                      <span class="fw-medium ms-1" id="total-time">{{ total_time }}s</span>
+                    </div>
+                    <div class="me-4">
+                      <span class="text-muted">Steps:</span>
+                      <span class="fw-medium ms-1" data-steps-count>{{ completed_steps }}/{{ total_steps }}</span>
+                    </div>
+                    <span class="badge {% if status == 'Success' %}bg-success{% elif status == 'Failed' %}bg-danger{% elif status == 'Stopped' %}bg-warning{% else %}bg-primary{% endif %} px-3 py-2" data-status>
+                      {{ status }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Progress Bar -->
+              <div class="progress mb-2" style="height: 24px;">
+                <div class="progress-bar {% if status == 'Success' %}bg-success{% elif status == 'Failed' %}bg-danger{% elif status == 'Stopped' %}bg-warning{% else %}bg-primary{% endif %} text-white d-flex align-items-center justify-content-center fw-medium"
+                     role="progressbar"
+                     style="width: {{ progress }}%"
+                     aria-valuenow="{{ progress }}"
+                     aria-valuemin="0"
+                     aria-valuemax="100">{{ progress }}% ({{ completed_steps }}/{{ total_steps }} steps)</div>
+              </div>
+
+              <!-- Status Info -->
+              <div class="text-muted small mb-4" data-step-info>
+                {% if status == 'Running' %}
+                Currently executing: {{ current_step }}
+                {% elif status == 'Success' %}
+                All {{ total_steps }} steps completed successfully
+                {% elif status == 'Failed' %}
+                Failed at: {{ current_step }}
+                {% if resume_from %}
+                <br>Will resume from: {{ resume_from }}
+                {% endif %}
+                {% elif status == 'Stopped' %}
+                Stopped at: {{ current_step }}
+                {% if resume_from %}
+                <br>Will resume from: {{ resume_from }}
+                {% endif %}
+                {% endif %}
+                {% if next_step and status != 'Success' %}
+                <br>Next step: {{ next_step }}
+                {% endif %}
+              </div>
+
+              <!-- Pipeline Steps -->
+              <div class="pipeline-steps mb-4">
+                {% for execution in executions %}
+                <div class="pipeline-step mb-3" data-step="{{ execution.process_name }}" data-status="{{ execution.status }}">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="d-flex align-items-center">
+                      <span class="me-2" data-status-icon>
+                        {% if execution.status == 'Success' %}✓
+                        {% elif execution.status == 'Failed' %}✗
+                        {% elif execution.status == 'Running' %}⚡
+                        {% elif execution.status == 'Stopped' %}⏹
+                        {% elif execution.status == 'Skipped' %}⊘
+                        {% elif execution.status == 'Pending' %}⌛
+                        {% else %}⏳{% endif %}
+                      </span>
+                      <span class="fw-medium">{{ execution.process_name }}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                      {% if execution.execution_time %}
+                      <small class="text-muted me-3" data-execution-time>
+                        Duration: {{ execution.execution_time|floatformat:2 }}s
+                      </small>
+                      {% endif %}
+                      <span class="badge {% if execution.status == 'Success' %}bg-success
+                                       {% elif execution.status == 'Failed' %}bg-danger
+                                       {% elif execution.status == 'Stopped' %}bg-warning
+                                       {% elif execution.status == 'Running' %}bg-primary
+                                       {% elif execution.status == 'Skipped' %}bg-secondary
+                                       {% elif execution.status == 'Pending' %}bg-info
+                                       {% else %}bg-warning{% endif %}">
+                        {{ execution.status }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="progress" style="height: 8px;">
+                    <div class="progress-bar {% if execution.status == 'Success' %}bg-success
+                                            {% elif execution.status == 'Failed' %}bg-danger
+                                            {% elif execution.status == 'Stopped' %}bg-warning
+                                            {% elif execution.status == 'Running' %}bg-primary
+                                            {% elif execution.status == 'Skipped' %}bg-secondary
+                                            {% elif execution.status == 'Pending' %}bg-info
+                                            {% else %}bg-warning{% endif %}"
+                         role="progressbar"
+                         style="width: {% if execution.status == 'Success' %}100
+                                      {% elif execution.status == 'Running' %}50
+                                      {% elif execution.status == 'Stopped' %}75
+                                      {% elif execution.status == 'Skipped' %}100
+                                      {% elif execution.status == 'Pending' %}0
+                                      {% else %}0{% endif %}%"
+                         aria-valuenow="{% if execution.status == 'Success' %}100
+                                       {% elif execution.status == 'Running' %}50
+                                       {% elif execution.status == 'Stopped' %}75
+                                       {% elif execution.status == 'Skipped' %}100
+                                       {% elif execution.status == 'Pending' %}0
+                                       {% else %}0{% endif %}"
+                         aria-valuemin="0"
+                         aria-valuemax="100">
+                    </div>
+                  </div>
+                  {% if execution.error_message %}
+                  <div class="mt-2">
+                    <small class="text-danger" data-error-message>{{ execution.error_message }}</small>
+                  </div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% else %}
+            <!-- Recent Executions View -->
+            {% if recent_executions %}
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="text-muted mb-0">Recent Executions</h6>
+                <span class="badge bg-light text-dark border">
+                  <i class="fas fa-info-circle me-1"></i> Click to view details
+                </span>
+              </div>
+              
+              <div class="row g-3">
+                {% for exe in recent_executions %}
+                <div class="col-md-6 col-lg-4">
+                  <div class="execution-card"
+                       onclick="loadExecution('{{ exe.fic_mis_date|date:'Y-m-d' }}', '{{ exe.run_number }}')"
+                       role="button"
+                       tabindex="0"
+                                               onkeypress="if(event.key === 'Enter') loadExecution('{{ exe.fic_mis_date|date:'Y-m-d' }}', '{{ exe.run_number }}')">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <div class="d-flex align-items-center">
+                        <span class="fw-medium">Run #{{ exe.run_number }}</span>
+                        <i class="fas fa-chevron-right ms-2 text-muted"></i>
+                      </div>
+                      <span class="badge {% if exe.status == 'Success' %}bg-success{% elif exe.status == 'Failed' %}bg-danger{% elif exe.status == 'Stopped' %}bg-warning{% else %}bg-primary{% endif %}">
+                        {{ exe.status }}
+                      </span>
+                    </div>
+                    <div class="text-muted small">
+                      <div class="d-flex justify-content-between">
+                        <span>
+                          <i class="far fa-calendar me-1"></i> 
+                          {{ exe.fic_mis_date|date:"Y-m-d" }}
+                        </span>
+                        <span>
+                          <i class="fas fa-tasks me-1"></i>
+                          {{ exe.completed_steps }}/{{ exe.total_steps }} steps
+                        </span>
+                      </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 4px;">
+                      <div class="progress-bar {% if exe.status == 'Success' %}bg-success{% elif exe.status == 'Failed' %}bg-danger{% elif exe.status == 'Stopped' %}bg-warning{% else %}bg-primary{% endif %}"
+                           role="progressbar"
+                           style="width: {{ exe.progress }}%"
+                           aria-valuenow="{{ exe.progress }}"
+                           aria-valuemin="0"
+                           aria-valuemax="100">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.pipeline-step {
+  padding: 1rem;
+  border: 1px solid rgba(0,0,0,.125);
+  border-radius: .5rem;
+  background-color: #fff;
+  transition: all 0.2s ease-in-out;
+}
+
+.pipeline-step:not(:last-child) {
+  margin-bottom: 1rem;
+}
+
+.pipeline-step:hover {
+  border-color: rgba(0,0,0,.2);
+  box-shadow: 0 .125rem .25rem rgba(0,0,0,.05);
+}
+
+.pipeline-step[data-status="Running"] {
+  border-color: var(--bs-primary);
+  background-color: rgba(var(--bs-primary-rgb), 0.02);
+}
+
+.pipeline-step[data-status="Stopped"] {
+  border-color: var(--bs-warning);
+  background-color: rgba(var(--bs-warning-rgb), 0.02);
+}
+
+.pipeline-step[data-status="Failed"] {
+  border-color: var(--bs-danger);
+  background-color: rgba(var(--bs-danger-rgb), 0.02);
+}
+
+.pipeline-step[data-status="Success"] {
+  border-color: var(--bs-success);
+  background-color: rgba(var(--bs-success-rgb), 0.02);
+}
+
+.pipeline-step[data-status="Skipped"] {
+  border-color: var(--bs-secondary);
+  background-color: rgba(var(--bs-secondary-rgb), 0.02);
+  opacity: 0.7;
+}
+
+.pipeline-step[data-status="Pending"] {
+  border-color: var(--bs-info);
+  background-color: rgba(var(--bs-info-rgb), 0.02);
+}
+
+.progress {
+  background-color: rgba(0,0,0,.05);
+}
+
+.badge {
+  min-width: 70px;
+  text-align: center;
+}
+
+.btn-group {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.card-body.border-bottom {
+  border-bottom: 1px solid rgba(0,0,0,.125);
+}
+
+.form-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.execution-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.125);
+  border-radius: .5rem;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.execution-card:hover,
+.execution-card:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 .25rem .5rem rgba(0,0,0,.1);
+  border-color: rgba(13,110,253,.4);
+  outline: none;
+}
+
+.execution-card:hover .fa-chevron-right,
+.execution-card:focus .fa-chevron-right {
+  transform: translateX(4px);
+  opacity: 1;
+}
+
+.execution-card .fa-chevron-right {
+  font-size: 0.8rem;
+  transition: all 0.2s ease-in-out;
+  opacity: 0.5;
+}
+
+.execution-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(0,0,0,.05);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform .3s ease-out;
+}
+
+.execution-card:hover::after,
+.execution-card:focus::after {
+  transform: scaleX(1);
+}
+
+/* Loading spinner styles */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+.execution-card.active {
+  background-color: #f8f9fa;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+}
+
+.execution-card .badge {
+  font-size: 0.75rem;
+  padding: 0.35em 0.65em;
+}
+
+.execution-card .progress {
+  background-color: rgba(0,0,0,.05);
+}
+
+.badge.bg-light {
+  background-color: #f8f9fa !important;
+  border: 1px solid #dee2e6 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .execution-card {
+    padding: 0.75rem;
+  }
+  
+  .execution-card .badge {
+    font-size: 0.7rem;
+  }
+  
+  .execution-card .fa-chevron-right {
+    opacity: 1;
+  }
+}
+
+.execution-details {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
+
+<script>
+// Function to load specific execution
+function loadExecution(date, run) {
+  // Convert run to integer if it's a string
+  const runNumber = parseInt(run, 10);
+  
+  // Show loading state
+  const loadingHtml = `
+    <div class="d-flex justify-content-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  `;
+  document.querySelector('.card-body').innerHTML = loadingHtml;
+  
+  // Navigate to the execution details
+  window.location.href = `{% url 'alm_app:monitor_view' %}?fic_mis_date=${encodeURIComponent(date)}&run_number=${encodeURIComponent(runNumber)}`;
+}
+
+// Function to go back to recent executions
+function clearSearch() {
+  window.location.href = "{% url 'alm_app:monitor_view' %}";
+}
+
+// Auto-refresh settings
+const REFRESH_INTERVAL = 2000; // 2 seconds
+let refreshTimer = null;
+
+// Function to refresh execution status
+function refreshStatus() {
+  {% if viewing_execution and fic_mis_date and run_number %}
+  const date = '{{ fic_mis_date|date:"Y-m-d" }}';
+  const run = {{ run_number }};
+
+  fetch(`{% url 'alm_app:get_execution_status' %}?fic_mis_date=${encodeURIComponent(date)}&run_number=${run}`, {
+    cache: 'no-store'
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.error) {
+      console.error('Error:', data.error);
+      return;
+    }
+
+    // Update the page content without full reload
+    updatePageContent(data);
+
+    // Stop refresh if execution is complete or stopped
+    if (['Success', 'Failed', 'Stopped'].includes(data.status)) {
+      stopRefresh();
+      console.log('Execution completed, stopped polling');
+    } else if (data.status === 'Running') {
+      console.log('Execution is running, continuing to poll');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    stopRefresh();
+  });
+  {% endif %}
+}
+
+// Function to update page content
+function updatePageContent(data) {
+  // Update progress bar
+  const progressBar = document.querySelector('.progress-bar');
+  if (progressBar) {
+    progressBar.style.width = `${data.progress}%`;
+    progressBar.setAttribute('aria-valuenow', data.progress);
+    progressBar.textContent = `${data.progress}% (${data.completed_steps}/${data.total_steps} steps)`;
+  }
+
+  // Update status badge
+  const statusBadge = document.querySelector('.badge');
+  if (statusBadge) {
+    statusBadge.className = `badge px-3 py-2 ${getStatusClass(data.status)}`;
+    statusBadge.textContent = data.status;
+  }
+
+  // Update steps count
+  const stepsCount = document.querySelector('[data-steps-count]');
+  if (stepsCount) {
+    stepsCount.textContent = `${data.completed_steps}/${data.total_steps}`;
+  }
+
+  // Update current step info
+  const stepInfo = document.querySelector('[data-step-info]');
+  if (stepInfo) {
+    let infoText = '';
+    if (data.status === 'Running') {
+      infoText = `Currently executing: ${data.current_step}`;
+    } else if (data.status === 'Success') {
+      infoText = `All ${data.total_steps} steps completed successfully`;
+    } else if (data.status === 'Failed') {
+      infoText = `Failed at: ${data.current_step}`;
+    } else if (data.status === 'Stopped') {
+      infoText = `Stopped at: ${data.current_step}`;
+    }
+    stepInfo.textContent = infoText;
+  }
+
+  // Update execution steps
+  if (data.executions) {
+    const stepsContainer = document.querySelector('.pipeline-steps');
+    if (stepsContainer) {
+      data.executions.forEach(execution => {
+        const stepEl = stepsContainer.querySelector(`[data-step="${execution.process_name}"]`);
+        if (stepEl) {
+          updateStepElement(stepEl, execution);
+        }
+      });
+    }
+  }
+}
+
+// Helper function to get status class
+function getStatusClass(status) {
+  switch (status) {
+    case 'Success': return 'bg-success';
+    case 'Failed': return 'bg-danger';
+    case 'Stopped': return 'bg-warning';
+    case 'Running': return 'bg-primary';
+    default: return 'bg-warning';
+  }
+}
+
+// Function to update a single step element
+function updateStepElement(stepEl, execution) {
+  // Update status badge
+  const badge = stepEl.querySelector('.badge');
+  if (badge) {
+    badge.className = `badge ${getStatusClass(execution.status)}`;
+    badge.textContent = execution.status;
+  }
+
+  // Update progress bar
+  const progressBar = stepEl.querySelector('.progress-bar');
+  if (progressBar) {
+    const progress = execution.status === 'Success' ? 100 : 
+                    execution.status === 'Running' ? 50 :
+                    execution.status === 'Stopped' ? 75 : 0;
+    progressBar.style.width = `${progress}%`;
+    progressBar.setAttribute('aria-valuenow', progress);
+    progressBar.className = `progress-bar ${getStatusClass(execution.status)}`;
+  }
+
+  // Update execution time if available
+  const timeEl = stepEl.querySelector('[data-execution-time]');
+  if (timeEl && execution.execution_time) {
+    timeEl.textContent = `Duration: ${execution.execution_time.toFixed(2)}s`;
+  }
+
+  // Update error message if any
+  const errorEl = stepEl.querySelector('[data-error-message]');
+  if (errorEl) {
+    if (execution.error_message) {
+      errorEl.textContent = execution.error_message;
+      errorEl.style.display = 'block';
+    } else {
+      errorEl.style.display = 'none';
+    }
+  }
+}
+
+// Refresh control functions
+function startRefresh() {
+  stopRefresh(); // Clear any existing timer
+  refreshTimer = setInterval(refreshStatus, REFRESH_INTERVAL);
+}
+
+function stopRefresh() {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+}
+
+// Start auto-refresh if there's an active execution
+{% if viewing_execution and status == 'Running' %}
+startRefresh();
+{% endif %}
+
+// Also start polling if we're viewing an execution that might be running
+{% if viewing_execution %}
+// Check if execution is running and start polling
+setTimeout(() => {
+  const statusBadge = document.querySelector('.badge[data-status]');
+  if (statusBadge && statusBadge.textContent.trim() === 'Running') {
+    console.log('Execution is running, starting polling');
+    startRefresh();
+  }
+}, 1000);
+{% endif %}
+
+// Clean up on page unload
+window.addEventListener('unload', stopRefresh);
+
+// Update the continue execution function in the script section
+function continueExecution(date, run) {
+  const btn = document.getElementById('continueBtn');
+  if (!btn) return;
+
+  // Convert run to integer if it's a string
+  const runNumber = parseInt(run, 10);
+
+  // Show loading state
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Continuing...';
+
+  // Make the continue request
+  fetch("{% url 'alm_app:continue_execution' %}", {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      fic_mis_date: date,
+      run_number: runNumber
+    })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.error) {
+      alert('Error continuing execution: ' + data.error);
+    } else {
+      // Show success message
+      const successHtml = `
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="fas fa-check-circle me-2"></i> Execution continued successfully.
+          <div class="mt-2">
+            <small>Continuing from: ${data.continue_from}</small>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      `;
+      document.querySelector('.card-body').insertAdjacentHTML('afterbegin', successHtml);
+      
+      // Clear any existing polling
+      if (window.currentPollInterval) {
+        clearInterval(window.currentPollInterval);
+        window.currentPollInterval = null;
+      }
+      
+      // Start polling for the continued execution (same run number)
+      console.log('Starting monitoring for continued execution');
+      startPollingNewExecution(date, runNumber);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error continuing execution. Please try again.');
+  })
+  .finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play me-1"></i> Continue Execution';
+  });
+}
+
+// Function to poll new execution status
+function startPollingNewExecution(date, runNumber) {
+  // Update URL without reloading
+  const newUrl = new URL(window.location.href);
+  newUrl.searchParams.set('fic_mis_date', date);
+  newUrl.searchParams.set('run_number', runNumber);
+  window.history.pushState({}, '', newUrl);
+
+  // Update status immediately
+  updateExecutionStatus(date, runNumber);
+
+  // Start continuous polling for the continued execution
+  const pollInterval = setInterval(() => {
+    updateExecutionStatus(date, runNumber).then(status => {
+      if (status === 'Success' || status === 'Failed' || status === 'Stopped') {
+        clearInterval(pollInterval);
+        console.log('Execution completed, stopped polling');
+      }
+    }).catch(error => {
+      console.error('Error polling execution status:', error);
+      clearInterval(pollInterval);
+    });
+  }, 2000);
+
+  // Store the interval ID so we can clear it if needed
+  window.currentPollInterval = pollInterval;
+}
+
+// Function to update execution status
+async function updateExecutionStatus(date, runNumber) {
+  try {
+    const response = await fetch(`{% url 'alm_app:get_execution_status' %}?fic_mis_date=${encodeURIComponent(date)}&run_number=${runNumber}`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const data = await response.json();
+    
+    // Update UI elements
+    updateUIElements(data);
+    
+    // If execution is running, ensure we're polling
+    if (data.status === 'Running') {
+      // Make sure we have an active polling interval
+      if (!window.currentPollInterval) {
+        console.log('Starting polling for running execution');
+        startPollingNewExecution(date, runNumber);
+      }
+    }
+    
+    return data.status;
+  } catch (error) {
+    console.error('Error updating status:', error);
+    return null;
+  }
+}
+
+// Function to update UI elements
+function updateUIElements(data) {
+  // Update progress bar
+  const progressBar = document.querySelector('.progress-bar');
+  if (progressBar) {
+    progressBar.style.width = `${data.progress}%`;
+    progressBar.setAttribute('aria-valuenow', data.progress);
+    progressBar.textContent = `${data.progress}% (${data.completed_steps}/${data.total_steps} steps)`;
+    
+    // Update progress bar class
+    progressBar.className = `progress-bar ${getStatusClass(data.status)} text-white d-flex align-items-center justify-content-center fw-medium`;
+  }
+
+  // Update status badge
+  const statusBadge = document.querySelector('.badge[data-status]');
+  if (statusBadge) {
+    statusBadge.className = `badge ${getStatusClass(data.status)} px-3 py-2`;
+    statusBadge.textContent = data.status;
+  }
+
+  // Update steps count
+  const stepsCount = document.querySelector('[data-steps-count]');
+  if (stepsCount) {
+    stepsCount.textContent = `${data.completed_steps}/${data.total_steps}`;
+  }
+
+  // Update current step info
+  const stepInfo = document.querySelector('[data-step-info]');
+  if (stepInfo) {
+    let infoText = '';
+    if (data.status === 'Running') {
+      infoText = `Currently executing: ${data.current_step}`;
+    } else if (data.status === 'Success') {
+      infoText = `All ${data.total_steps} steps completed successfully`;
+    } else if (data.status === 'Failed') {
+      infoText = `Failed at: ${data.current_step}`;
+    } else if (data.status === 'Stopped') {
+      infoText = `Stopped at: ${data.current_step}`;
+    }
+    stepInfo.textContent = infoText;
+  }
+
+  // Update control buttons visibility
+  const stopBtn = document.getElementById('stopBtn');
+  const continueBtn = document.getElementById('continueBtn');
+
+  if (stopBtn) {
+    if (data.status === 'Running') {
+      stopBtn.style.display = 'inline-block';
+      stopBtn.disabled = false;
+    } else {
+      stopBtn.style.display = 'none';
+    }
+  }
+  if (continueBtn) {
+    if (['Failed', 'Stopped'].includes(data.status)) {
+      continueBtn.style.display = 'inline-block';
+      continueBtn.disabled = false;
+    } else {
+      continueBtn.style.display = 'none';
+    }
+  }
+
+  // Update pipeline steps
+  if (data.executions) {
+    data.executions.forEach(execution => {
+      const stepEl = document.querySelector(`[data-step="${execution.process_name}"]`);
+      if (stepEl) {
+        updateStepElement(stepEl, execution);
+      }
+    });
+  }
+}
+
+// Function to stop execution
+function stopExecution(date, run) {
+  const btn = document.getElementById('stopBtn');
+  if (!btn) return;
+
+  // Convert run to integer if it's a string
+  const runNumber = parseInt(run, 10);
+
+  // Confirm before stopping
+  if (!confirm('Are you sure you want to stop this execution?')) {
+    return;
+  }
+
+  // Show loading state
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Stopping...';
+
+  // Make the stop request
+  fetch("{% url 'alm_app:stop_execution' %}", {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      fic_mis_date: date,
+      run_number: runNumber
+    })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.error) {
+      alert('Error stopping execution: ' + data.error);
+    } else {
+      // Show success message
+      const successHtml = `
+        <div class="alert alert-warning">
+          <i class="fas fa-pause-circle me-2"></i> Execution stopped successfully.
+          <div class="mt-2">
+            <small>Stopped at: ${data.message}</small>
+          </div>
+        </div>
+      `;
+      document.querySelector('.card-body').insertAdjacentHTML('afterbegin', successHtml);
+      
+      // Reload after a moment to show updated status
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error stopping execution. Please try again.');
+  })
+  .finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-stop me-1"></i> Stop Execution';
+  });
+}
+</script>
+{% endblock %}

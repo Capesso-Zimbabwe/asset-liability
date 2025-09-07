@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Contractual Gap Report - Usage Example{% endblock %}
+
+{% block extra_head %}
+<style>
+    .container {
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        max-width: 800px;
+        margin: 40px auto;
+    }
+    
+    h1 {
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+    }
+    
+    h2 {
+        color: #555;
+        margin-top: 30px;
+    }
+    
+    .code-block {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 15px 0;
+        font-family: 'Courier New', monospace;
+        overflow-x: auto;
+    }
+    
+    .example-link {
+        display: inline-block;
+        background-color: #007bff;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 4px;
+        margin: 10px 5px;
+    }
+    
+    .example-link:hover {
+        background-color: #0056b3;
+    }
+    
+    .note {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .step {
+        background-color: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        margin: 15px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Contractual Gap Report - Usage Guide</h1>
+    
+    <h2>Overview</h2>
+    <p>The Contractual Gap Report provides a detailed analysis of cash flow gaps between inflows and outflows across different time buckets. This report helps in understanding liquidity positions and managing interest rate risk.</p>
+    
+    <h2>Prerequisites</h2>
+    <div class="step">
+        <h3>Step 1: Ensure Data is Loaded</h3>
+        <p>Before generating the report, make sure you have:</p>
+        <ul>
+            <li>Loaded cash flow data using the <code>report_loader.py</code> functions</li>
+            <li>Created the Report_Contractual_&lt;YYYYMMDD&gt; table for your date</li>
+            <li>Set up TimeBucketMaster records for your process</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h3>Step 2: Load Data Example</h3>
+        <div class="code-block">
+from alm_app.functions.report_loader import create_report_contractual_table, report_contractual_load
+from datetime import date
+
+# Create the table for today's date
+fic_mis_date = date.today()
+process_name = "your_process_name"
+
+# Create the table
+table_name = create_report_contractual_table(fic_mis_date)
+
+# Load the data
+records_processed = report_contractual_load(fic_mis_date, process_name)
+        </div>
+    </div>
+    
+    <h2>URL Patterns</h2>
+    <p>The report is accessible via two URL patterns:</p>
+    
+    <div class="code-block">
+# HTML Report View
+/reports/contractual-gap/&lt;fic_mis_date&gt;/&lt;process_name&gt;/
+
+# JSON API Endpoint
+/api/reports/contractual-gap/&lt;fic_mis_date&gt;/&lt;process_name&gt;/
+    </div>
+    
+    <h2>Example URLs</h2>
+    <div class="note">
+        <strong>Note:</strong> Replace the date and process name with your actual values.
+    </div>
+    
+    <a href="/reports/contractual-gap/2024-01-15/ProcessA/" class="example-link">
+        HTML Report Example
+    </a>
+    
+    <a href="/api/reports/contractual-gap/2024-01-15/ProcessA/" class="example-link">
+        JSON API Example
+    </a>
+    
+    <h2>Report Structure</h2>
+    <p>The report contains the following sections:</p>
+    
+    <div class="step">
+        <h3>1. Total Inflows</h3>
+        <p>Products with flow_type = 'inflow' (typically assets like loans, investments)</p>
+        <ul>
+            <li>Assets Held for Sale</li>
+            <li>CPS Loans</li>
+            <li>Statutory Reserves</li>
+            <li>Trade Creditors</li>
+            <li>Treasury Bills</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h3>2. Total Outflows</h3>
+        <p>Products with flow_type = 'outflow' (typically liabilities like deposits, borrowings)</p>
+        <ul>
+            <li>Savings and Overdrafts</li>
+            <li>Dealing and Investment Securities</li>
+            <li>Lines of Credit</li>
+            <li>Treasury Bills</li>
+            <li>Interbank Deposits</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h3>3. Summary Calculations</h3>
+        <ul>
+            <li><strong>Net Liquidity Gap:</strong> Inflows - Outflows (column-wise)</li>
+            <li><strong>Net Gap % of Total Outflows:</strong> (Net Gap / Total Outflows) × 100</li>
+            <li><strong>Cumulative Gap:</strong> Running sum of Net Gaps across buckets</li>
+        </ul>
+    </div>
+    
+    <h2>Report Features</h2>
+    <ul>
+        <li>Dynamic bucket columns based on TimeBucketMaster configuration</li>
+        <li>Color-coded values (green=positive, red=negative, grey=zero)</li>
+        <li>Export to CSV functionality</li>
+        <li>Responsive design for different screen sizes</li>
+        <li>Print-friendly styling</li>
+    </ul>
+    
+    <h2>API Response Format</h2>
+    <p>The JSON API returns structured data that can be consumed by other applications:</p>
+    
+    <div class="code-block">
+{
+    "fic_mis_date": "2024-01-15",
+    "process_name": "ProcessA",
+    "bucket_columns": [
+        {
+            "column_name": "bucket_001_20240115_20240122",
+            "bucket_number": 1,
+            "start_date": "2024-01-15",
+            "end_date": "2024-01-22",
+            "display_name": "15-Jan-2024"
+        }
+    ],
+    "raw_data": [...]
+}
+    </div>
+    
+    <h2>Troubleshooting</h2>
+    <div class="note">
+        <strong>Common Issues:</strong>
+        <ul>
+            <li>If you get "No bucket columns found" error, ensure TimeBucketMaster has records for your process</li>
+            <li>If the table doesn't exist, run <code>create_report_contractual_table()</code> first</li>
+            <li>If no data appears, check that <code>report_contractual_load()</code> was run successfully</li>
+        </ul>
+    </div>
+</div>
+{% endblock %} 

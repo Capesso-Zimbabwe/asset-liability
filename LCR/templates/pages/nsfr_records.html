@@ -1,0 +1,165 @@
+{# pages/nsfr_records.html #}
+{% extends "base/base.html" %}
+{% load tailwind_tags %}
+
+{% block content %}
+  <h1 class="text-base font-semibold mb-4">NSFR Records & Ratios</h1>
+
+  <form method="get" class="mb-6 flex items-center space-x-2 text-sm">
+    <label class="font-medium">Select Date:</label>
+    <select name="reporting_date" class="border rounded px-2 py-1 text-sm">
+      <option value="">— pick a date —</option>
+      {% for d in reporting_dates %}
+        <option value="{{ d|date:'Y-m-d' }}" {% if selected_date == d %}selected{% endif %}>
+          {{ d|date:"F j, Y" }}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit"
+            class="px-4 py-1 bg-[#171426] hover:bg-[#695404] text-white rounded text-sm">
+      View Report
+    </button>
+  </form>
+
+  {% if selected_date %}
+    {# — NSFR Summary Table — #}
+    {% if nsfr_data %}
+      <section class="mb-8 text-sm">
+        <h2 class="font-medium mb-2">NSFR Summary</h2>
+        <table class="w-full border-collapse border border-gray-300 text-sm">
+          <thead>
+            <tr class="bg-[#171426] text-white">
+              <th class="px-2 py-1 text-left border border-gray-300">Currency</th>
+              <th class="px-2 py-1 text-right border border-gray-300">ASF</th>
+              <th class="px-2 py-1 text-right border border-gray-300">RSF</th>
+              <th class="px-2 py-1 text-right border border-gray-300">NSFR (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in nsfr_data %}
+              <tr class="border-t">
+                <td class="px-2 py-1 border border-gray-300">{{ row.currency }}</td>
+                <td class="px-2 py-1 text-right border border-gray-300">{{ row.asf }}</td>
+                <td class="px-2 py-1 text-right border border-gray-300">{{ row.rsf }}</td>
+                <td class="px-2 py-1 text-right border border-gray-300">
+                  {% if row.nsfr is not None %}{{ row.nsfr }}{% else %}&mdash;{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    {% else %}
+      <p class="text-gray-700 mb-8 text-sm">
+        No NSFR summary data for {{ selected_date|date:"F j, Y" }}.
+      </p>
+    {% endif %}
+
+    {# — NSFR Detailed Records — #}
+    {% if currency_groups %}
+      {% for group in currency_groups %}
+        {% regroup group.rows by record_type as type_groups %}
+
+        {# ================= ASF table ================= #}
+        {% for tg in type_groups %}
+          {% if tg.grouper == 'ASF' %}
+            <section class="mb-8 text-sm">
+              <h2 class="font-medium mb-2">{{ group.currency }} — ASF Details</h2>
+              <table class="w-full border-collapse border border-gray-300 text-sm">
+                <thead>
+                  <tr class="bg-[#171426] text-white">
+                    <th class="px-2 py-1 text-left border border-gray-300">Section</th>
+                    <th class="px-2 py-1 text-left border border-gray-300">Item</th>
+                    <th class="px-2 py-1 text-left border border-gray-300">Weight</th>
+                    <th class="px-2 py-1 text-right border border-gray-300">Amount</th>
+                    <th class="px-2 py-1 text-right border border-gray-300">Adjusted Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% regroup tg.list by section_name as section_groups %}
+                  {% for section_group in section_groups %}
+                    {% for row in section_group.list %}
+                      <tr class="border-t">
+                        {% if forloop.first %}
+                          <td rowspan="{{ section_group.list|length }}"
+                              class="px-2 py-1 border border-gray-300 align-top">
+                            {{ section_group.grouper }}
+                          </td>
+                        {% endif %}
+                        <td class="px-2 py-1 border border-gray-300">{{ row.item_name }}</td>
+                        <td class="px-2 py-1 border border-gray-300">{{ row.weight }}</td>
+                        <td class="px-2 py-1 text-right border border-gray-300">
+                          {{ row.amount_before_weights }}
+                        </td>
+                        <td class="px-2 py-1 text-right border border-gray-300">
+                          {{ row.adjusted_amount }}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% endfor %}
+                  <tr class="bg-gray-50 font-medium">
+                    <td colspan="4" class="px-2 py-1 text-right border border-gray-300">Total ASF:</td>
+                    <td class="px-2 py-1 text-right border border-gray-300">{{ group.totals_by_type.ASF }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          {% endif %}
+        {% endfor %}
+
+        {# ================= RSF table ================= #}
+        {% for tg in type_groups %}
+          {% if tg.grouper == 'RSF' %}
+            <section class="mb-8 text-sm">
+              <h2 class="font-medium mb-2">{{ group.currency }} — RSF Details</h2>
+              <table class="w-full border-collapse border border-gray-300 text-sm">
+                <thead>
+                  <tr class="bg-[#171426] text-white">
+                    <th class="px-2 py-1 text-left border border-gray-300">Section</th>
+                    <th class="px-2 py-1 text-left border border-gray-300">Item</th>
+                    <th class="px-2 py-1 text-left border border-gray-300">Weight</th>
+                    <th class="px-2 py-1 text-right border border-gray-300">Amount</th>
+                    <th class="px-2 py-1 text-right border border-gray-300">Adjusted Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% regroup tg.list by section_name as section_groups %}
+                  {% for section_group in section_groups %}
+                    {% for row in section_group.list %}
+                      <tr class="border-t">
+                        {% if forloop.first %}
+                          <td rowspan="{{ section_group.list|length }}"
+                              class="px-2 py-1 border border-gray-300 align-top">
+                            {{ section_group.grouper }}
+                          </td>
+                        {% endif %}
+                        <td class="px-2 py-1 border border-gray-300">{{ row.item_name }}</td>
+                        <td class="px-2 py-1 border border-gray-300">{{ row.weight }}</td>
+                        <td class="px-2 py-1 text-right border border-gray-300">
+                          {{ row.amount_before_weights }}
+                        </td>
+                        <td class="px-2 py-1 text-right border border-gray-300">
+                          {{ row.adjusted_amount }}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% endfor %}
+                  <tr class="bg-gray-50 font-medium">
+                    <td colspan="4" class="px-2 py-1 text-right border border-gray-300">Total RSF:</td>
+                    <td class="px-2 py-1 text-right border border-gray-300">{{ group.totals_by_type.RSF }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    {% endif %}
+
+    {% if not nsfr_data and not currency_groups %}
+      <p class="text-center text-gray-600 text-sm">
+        No NSFR data found for {{ selected_date|date:"F j, Y" }}.
+      </p>
+    {% endif %}
+  {% endif %}
+{% endblock %}

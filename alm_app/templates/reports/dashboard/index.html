@@ -1,0 +1,1146 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4 text-gray-800">ALM Dashboard</h1>
+            
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+            
+            <!-- Filter Section -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Filter by FIC MIS Date</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="dateFilterForm" class="row align-items-end">
+                        <div class="col-md-3 mb-2">
+                            <label for="manual_date" class="form-label small text-muted">Manual Date Entry:</label>
+                            <input type="date" 
+                                   class="form-control form-control-sm" 
+                                   id="manual_date" 
+                                   name="fic_mis_date" 
+                                   value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="quick_select" class="form-label small text-muted">Quick Select:</label>
+                            <select class="form-control form-control-sm" id="quick_select" onchange="updateManualDate()">
+                                <option value="">-- Select Date --</option>
+                                {% for date in available_dates %}
+                                    <option value="{{ date|date:'Y-m-d' }}" 
+                                            {% if selected_date and date == selected_date %}selected{% endif %}>
+                                        {{ date|date:'Y-m-d' }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-2 text-right">
+                            <button type="submit" class="btn btn-primary btn-sm mr-2" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;"
+  onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';"
+  onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                                <i class="fas fa-filter"></i> Apply Filter
+                            </button>
+                            <a href="{% url 'alm_app:dashboard' %}" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-times"></i> Clear Filter
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Overview Cards (Staging Data Only) -->
+            <div class="row">
+                <!-- Loan Contracts Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                        Loan Contracts
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_loan_contracts|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-file-contract fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Overdrafts Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Overdrafts
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_overdraft_contracts|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Investments Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Investments
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_investments|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- First Day Products Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                        First Day Products
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_first_day_products|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Credit Lines Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-dark shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                                        Credit Lines
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_credit_lines|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-money-check-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Exchange Rates Card -->
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-secondary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                        Exchange Rates
+                                        {% if selected_date %}
+                                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_exchange_rates|default:0 }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Report Tables Summary by Product Type and Currency -->
+            {% if report_summaries %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Report Tables Summary by Product Type & Currency
+                        <small class="text-muted">(Dynamically loaded from database)</small>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Base Report Tables -->
+                    {% if report_summaries.base_reports %}
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="font-weight-bold text-primary mb-0">
+                                <i class="fas fa-table"></i> Base Report Tables
+                                <span class="badge badge-primary">{{ report_summaries.base_reports|length }}</span>
+                            </h6>
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-toggle="collapse" data-target="#baseReports" aria-expanded="true">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="baseReports">
+                            {% for report in report_summaries.base_reports %}
+                            <div class="card mb-3">
+                                <div class="card-header bg-light py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-calendar-alt text-primary"></i>
+                                            {{ report.table_info.formatted_date }}
+                                        </h6>
+                                        <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#baseReport{{ forloop.counter }}" aria-expanded="true">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="collapse show" id="baseReport{{ forloop.counter }}">
+                                    <div class="card-body py-2">
+                                        {% if report.product_summary %}
+                                            <!-- Debug Table View -->
+                                            <div class="table-responsive mb-4">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Product Type</th>
+                                                            <th>Currency</th>
+                                                            <th>Count</th>
+                                                            <th>Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for product_type, product_data in report.product_summary.items %}
+                                                            {% if product_data.currencies %}
+                                                                {% for currency, curr_data in product_data.currencies.items %}
+                                                                    <tr>
+                                                                        <td>{{ product_type }}</td>
+                                                                        <td>{{ currency }}</td>
+                                                                        <td>{{ curr_data.count }}</td>
+                                                                        <td class="text-right">{{ currency }} {{ curr_data.amount|floatformat:2 }}</td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            
+
+                                            <!-- Card View -->
+                                            <div class="row">
+                                                {% for product_type, product_data in report.product_summary.items %}
+                                                <div class="col-md-4 mb-3 product-box {% if forloop.counter > 6 %}d-none extra-product{% endif %}">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header py-2 text-white" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;">
+                                                            <h6 class="mb-0">{{ product_type }}</h6>
+                                                            <small>Total Records: {{ product_data.total_records|default:0 }}</small>
+                                                        </div>
+                                                        <div class="card-body p-2">
+                                                            {% if product_data.currencies %}
+                                                                {% for currency, curr_data in product_data.currencies.items %}
+                                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                        <div class="d-flex align-items-center">
+                                                                            <small>({{ curr_data.count }})</small>
+                                                                        </div>
+                                                                        <div class="text-right">
+                                                                            {{ currency }} {{ curr_data.amount|floatformat:2 }}
+                                                                        </div>
+                                                                    </div>
+                                                                {% endfor %}
+                                                            {% else %}
+                                                                <small class="text-muted">No currency data</small>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% if report.product_summary.items|length > 6 %}
+                                            
+                                            {% endif %}
+
+                                            <style>
+                                            .cursor-pointer {
+                                                cursor: pointer;
+                                            }
+                                            details summary::-webkit-details-marker {
+                                                display: none;
+                                            }
+                                            details summary::before {
+                                                content: '►';
+                                                margin-right: 8px;
+                                            }
+                                            details[open] summary::before {
+                                                content: '▼';
+                                            }
+                                            </style>
+                                        {% else %}
+                                            <p class="text-muted small mb-0">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                No data available{% if report.error %} - {{ report.error }}{% endif %}
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Behavioral Report Tables -->
+                    {% if report_summaries.behavioral_reports %}
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="font-weight-bold text-success mb-0">
+                                <i class="fas fa-chart-line"></i> Behavioral Report Tables
+                                <span class="badge badge-success">{{ report_summaries.behavioral_reports|length }}</span>
+                            </h6>
+                            <button class="btn btn-sm btn-outline-success" type="button" data-toggle="collapse" data-target="#behavioralReports" aria-expanded="true">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="behavioralReports">
+                            {% for report in report_summaries.behavioral_reports %}
+                            <div class="card mb-3">
+                                <div class="card-header bg-light py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-calendar-alt text-success"></i>
+                                            {{ report.table_info.formatted_date }}
+                                        </h6>
+                                        <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#behavioralReport{{ forloop.counter }}" aria-expanded="true">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="collapse show" id="behavioralReport{{ forloop.counter }}">
+                                    <div class="card-body py-2">
+                                        {% if report.product_summary %}
+                                            <!-- Debug Table View -->
+                                            <div class="table-responsive mb-4">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Product Type</th>
+                                                            <th>Currency</th>
+                                                            <th>Count</th>
+                                                            <th>Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for product_type, product_data in report.product_summary.items %}
+                                                            {% if product_data.currencies %}
+                                                                {% for currency, curr_data in product_data.currencies.items %}
+                                                                    <tr>
+                                                                        <td>{{ product_type }}</td>
+                                                                        <td>{{ currency }}</td>
+                                                                        <td>{{ curr_data.count }}</td>
+                                                                        <td class="text-right">{{ currency }} {{ curr_data.amount|floatformat:2 }}</td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            
+
+                                            <!-- Card View -->
+                                            <div class="row">
+                                                {% for product_type, product_data in report.product_summary.items %}
+                                                <div class="col-md-4 mb-3 product-box {% if forloop.counter > 6 %}d-none extra-product{% endif %}">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header py-2 bg-success text-white">
+                                                            <h6 class="mb-0">{{ product_type }}</h6>
+                                                            <small>Total Records: {{ product_data.total_records|default:0 }}</small>
+                                                        </div>
+                                                        <div class="card-body p-2">
+                                                            {% if product_data.currencies %}
+                                                                {% for currency, curr_data in product_data.currencies.items %}
+                                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                        <div class="d-flex align-items-center">
+                                                                            <small>({{ curr_data.count }})</small>
+                                                                        </div>
+                                                                        <div class="text-right">
+                                                                            {{ currency }} {{ curr_data.amount|floatformat:2 }}
+                                                                        </div>
+                                                                    </div>
+                                                                {% endfor %}
+                                                            {% else %}
+                                                                <small class="text-muted">No currency data</small>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% if report.product_summary.items|length > 6 %}
+                                            
+                                            {% endif %}
+
+                                            <style>
+                                            .cursor-pointer {
+                                                cursor: pointer;
+                                            }
+                                            details summary::-webkit-details-marker {
+                                                display: none;
+                                            }
+                                            details summary::before {
+                                                content: '►';
+                                                margin-right: 8px;
+                                            }
+                                            details[open] summary::before {
+                                                content: '▼';
+                                            }
+                                            </style>
+                                        {% else %}
+                                            <p class="text-muted small mb-0">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                No data available{% if report.error %} - {{ report.error }}{% endif %}
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Consolidated Report Tables -->
+                    {% if report_summaries.cons_reports %}
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="font-weight-bold text-info mb-0">
+                                <i class="fas fa-layer-group"></i> Consolidated Report Tables
+                                <span class="badge badge-info">{{ report_summaries.cons_reports|length }}</span>
+                            </h6>
+                            <button class="btn btn-sm btn-outline-info" type="button" data-toggle="collapse" data-target="#consReports" aria-expanded="true">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="consReports">
+                            {% for report in report_summaries.cons_reports %}
+                            <div class="card mb-3">
+                                <div class="card-header bg-light py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-calendar-alt text-info"></i>
+                                            {{ report.table_info.formatted_date }}
+                                        </h6>
+                                        <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#consReport{{ forloop.counter }}" aria-expanded="true">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="collapse show" id="consReport{{ forloop.counter }}">
+                                    <div class="card-body py-2">
+                                        {% if report.product_summary %}
+                                            <!-- Debug Table View -->
+                                            <div class="table-responsive mb-4">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Product Type</th>
+                                                            <th>Currency</th>
+                                                            <th>Count</th>
+                                                            <th>Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for product_type, product_data in report.product_summary.items %}
+                                                            {% if product_data.currencies %}
+                                                                {% for currency, curr_data in product_data.currencies.items %}
+                                                                    <tr>
+                                                                        <td>{{ product_type }}</td>
+                                                                        <td>{{ currency }}</td>
+                                                                        <td>{{ curr_data.count }}</td>
+                                                                        <td class="text-right">{{ currency }} {{ curr_data.amount|floatformat:2 }}</td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            
+
+                                            <!-- Card View -->
+                                            <div class="row">
+                                                {% for product_type, product_data in report.product_summary.items %}
+                                                <div class="col-md-4 mb-3 product-box {% if forloop.counter > 6 %}d-none extra-product{% endif %}">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header py-2 bg-info text-white">
+                                                            <h6 class="mb-0">{{ product_type }}</h6>
+                                                            <small>Total Records: {{ product_data.total_records|default:0 }}</small>
+                                                        </div>
+                                                        <div class="card-body p-2">
+                                                            {% if product_data.currencies %}
+                                                                {% for currency, curr_data in product_data.currencies.items %}
+                                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                        <div class="d-flex align-items-center">
+                                                                            <small>({{ curr_data.count }})</small>
+                                                                        </div>
+                                                                        <div class="text-right">
+                                                                            {{ currency }} {{ curr_data.amount|floatformat:2 }}
+                                                                        </div>
+                                                                    </div>
+                                                                {% endfor %}
+                                                            {% else %}
+                                                                <small class="text-muted">No currency data</small>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% if report.product_summary.items|length > 6 %}
+                                            
+                                            {% endif %}
+
+                                            <style>
+                                            .cursor-pointer {
+                                                cursor: pointer;
+                                            }
+                                            details summary::-webkit-details-marker {
+                                                display: none;
+                                            }
+                                            details summary::before {
+                                                content: '►';
+                                                margin-right: 8px;
+                                            }
+                                            details[open] summary::before {
+                                                content: '▼';
+                                            }
+                                            </style>
+                                        {% else %}
+                                            <p class="text-muted small mb-0">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                No data available{% if report.error %} - {{ report.error }}{% endif %}
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Rate Sensitive Report Tables -->
+                    {% if report_summaries.rate_reports %}
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="font-weight-bold text-warning mb-0">
+                                <i class="fas fa-percentage"></i> Rate Sensitive Report Tables
+                                <span class="badge badge-warning">{{ report_summaries.rate_reports|length }}</span>
+                            </h6>
+                            <button class="btn btn-sm btn-outline-warning" type="button" data-toggle="collapse" data-target="#rateReports" aria-expanded="true">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        <div class="collapse show" id="rateReports">
+                            {% for report in report_summaries.rate_reports %}
+                            <div class="card mb-3">
+                                <div class="card-header bg-light py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-calendar-alt text-warning"></i>
+                                            {{ report.table_info.formatted_date }}
+                                        </h6>
+                                        <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#rateReport{{ forloop.counter }}" aria-expanded="true">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="collapse show" id="rateReport{{ forloop.counter }}">
+                                    <div class="card-body py-2">
+                                        {% if report.product_summary %}
+                                            <!-- Debug Table View -->
+                                            <div class="table-responsive mb-4">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Product Type</th>
+                                                            <th>Currency</th>
+                                                            <th>Count</th>
+                                                            <th>Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for product_type, product_data in report.product_summary.items %}
+                                                            {% if product_data.currencies %}
+                                                                {% for currency, curr_data in product_data.currencies.items %}
+                                                                    <tr>
+                                                                        <td>{{ product_type }}</td>
+                                                                        <td>{{ currency }}</td>
+                                                                        <td>{{ curr_data.count }}</td>
+                                                                        <td class="text-right">{{ currency }} {{ curr_data.amount|floatformat:2 }}</td>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            
+
+                                            <!-- Card View -->
+                                            <div class="row">
+                                                {% for product_type, product_data in report.product_summary.items %}
+                                                <div class="col-md-4 mb-3 product-box {% if forloop.counter > 6 %}d-none extra-product{% endif %}">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header py-2 bg-warning text-dark">
+                                                            <h6 class="mb-0">{{ product_type }}</h6>
+                                                            <small>Total Records: {{ product_data.total_records|default:0 }}</small>
+                                                        </div>
+                                                        <div class="card-body p-2">
+                                                            {% if product_data.currencies %}
+                                                                {% for currency, curr_data in product_data.currencies.items %}
+                                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                        <div class="d-flex align-items-center">
+                                                                            <small>({{ curr_data.count }})</small>
+                                                                        </div>
+                                                                        <div class="text-right">
+                                                                            {{ currency }} {{ curr_data.amount|floatformat:2 }}
+                                                                        </div>
+                                                                    </div>
+                                                                {% endfor %}
+                                                            {% else %}
+                                                                <small class="text-muted">No currency data</small>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% if report.product_summary.items|length > 6 %}
+                                            
+                                            {% endif %}
+
+                                            <style>
+                                            .cursor-pointer {
+                                                cursor: pointer;
+                                            }
+                                            details summary::-webkit-details-marker {
+                                                display: none;
+                                            }
+                                            details summary::before {
+                                                content: '►';
+                                                margin-right: 8px;
+                                            }
+                                            details[open] summary::before {
+                                                content: '▼';
+                                            }
+                                            </style>
+                                        {% else %}
+                                            <p class="text-muted small mb-0">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                No data available{% if report.error %} - {{ report.error }}{% endif %}
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- No Report Tables Message -->
+                    {% if not report_summaries.base_reports and not report_summaries.behavioral_reports and not report_summaries.cons_reports and not report_summaries.rate_reports %}
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i>
+                        No report tables found in the database. Report tables will appear here once they are generated.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if report_tables_error %}
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {{ report_tables_error }}
+                </div>
+            {% endif %}
+            
+            <!-- Staging Data Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Staging Data Summary by FIC MIS Date
+                        {% if selected_date %}
+                            <small class="text-muted">(Filtered by: {{ selected_date|date:'Y-m-d' }})</small>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if dashboard_data %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>FIC MIS Date</th>
+                                        <th>Loan Contracts</th>
+                                        <th>Overdrafts</th>
+                                        <th>Investments</th>
+                                        <th>First Day Products</th>
+                                        <th>Credit Lines</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for data in dashboard_data %}
+                                    <tr {% if selected_date and data.fic_mis_date == selected_date %}class="table-primary"{% endif %}>
+                                        <td class="font-weight-bold">{{ data.fic_mis_date|date:'Y-m-d' }}</td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.loan_contracts.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.loan_contracts.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.overdraft_contracts.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.overdraft_contracts.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.investments.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.investments.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.first_day_products.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.first_day_products.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <strong>Count:</strong> {{ data.credit_lines.count }}<br>
+                                                <strong>Balance:</strong> ${{ data.credit_lines.total_balance|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No staging data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Currency-wise Breakdown for Selected Date -->
+            {% if staging_summary %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Currency-wise Breakdown
+                        {% if selected_date %}
+                            <small class="text-muted">({{ selected_date|date:'Y-m-d' }})</small>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Loan Contracts -->
+                        <div class="col-md-6 col-xl-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header  text-white"  style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;">
+                                    <h6 class="mb-0">Loan Contracts</h6>
+                                    <small>Total: ${{ staging_summary.loan_contracts.total.balance|floatformat:2 }}</small>
+                                </div>
+                                <div class="card-body">
+                                    {% if staging_summary.loan_contracts.by_currency %}
+                                        {% for currency in staging_summary.loan_contracts.by_currency %}
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="badge badge-secondary">{{ currency.v_ccy_code }}</span>
+                                                <small class="text-muted">{{ currency.count }} records</small>
+                                            </div>
+                                            <div class="small font-weight-bold">
+                                                {{ currency.v_ccy_code }} {{ currency.total_balance|floatformat:2 }}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small">No currency breakdown available</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Overdraft Contracts -->
+                        <div class="col-md-6 col-xl-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">Overdraft Contracts</h6>
+                                    <small>Total: ${{ staging_summary.overdraft_contracts.total.balance|floatformat:2 }}</small>
+                                </div>
+                                <div class="card-body">
+                                    {% if staging_summary.overdraft_contracts.by_currency %}
+                                        {% for currency in staging_summary.overdraft_contracts.by_currency %}
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="badge badge-secondary">{{ currency.v_ccy_code }}</span>
+                                                <small class="text-muted">{{ currency.count }} records</small>
+                                            </div>
+                                            <div class="small font-weight-bold">
+                                                {{ currency.v_ccy_code }} {{ currency.total_balance|floatformat:2 }}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small">No currency breakdown available</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Investments -->
+                        <div class="col-md-6 col-xl-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">Investments</h6>
+                                    <small>Total: ${{ staging_summary.investments.total.balance|floatformat:2 }}</small>
+                                </div>
+                                <div class="card-body">
+                                    {% if staging_summary.investments.by_currency %}
+                                        {% for currency in staging_summary.investments.by_currency %}
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="badge badge-secondary">{{ currency.v_ccy_code }}</span>
+                                                <small class="text-muted">{{ currency.count }} records</small>
+                                            </div>
+                                            <div class="small font-weight-bold">
+                                                {{ currency.v_ccy_code }} {{ currency.total_balance|floatformat:2 }}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small">No currency breakdown available</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- First Day Products -->
+                        <div class="col-md-6 col-xl-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">First Day Products</h6>
+                                    <small>Total: ${{ staging_summary.first_day_products.total.balance|floatformat:2 }}</small>
+                                </div>
+                                <div class="card-body">
+                                    {% if staging_summary.first_day_products.by_currency %}
+                                        {% for currency in staging_summary.first_day_products.by_currency %}
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="badge badge-secondary">{{ currency.v_ccy_code }}</span>
+                                                <small class="text-muted">{{ currency.count }} records</small>
+                                            </div>
+                                            <div class="small font-weight-bold">
+                                                {{ currency.v_ccy_code }} {{ currency.total_balance|floatformat:2 }}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small">No currency breakdown available</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Credit Lines -->
+                        <div class="col-md-6 col-xl-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header bg-dark text-white">
+                                    <h6 class="mb-0">Credit Lines</h6>
+                                    <small>Total: ${{ staging_summary.credit_lines.total.balance|floatformat:2 }}</small>
+                                </div>
+                                <div class="card-body">
+                                    {% if staging_summary.credit_lines.by_currency %}
+                                        {% for currency in staging_summary.credit_lines.by_currency %}
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="badge badge-secondary">{{ currency.v_ccy_code }}</span>
+                                                <small class="text-muted">{{ currency.count }} records</small>
+                                            </div>
+                                            <div class="small font-weight-bold">
+                                                {{ currency.v_ccy_code }} {{ currency.total_balance|floatformat:2 }}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted small">No currency breakdown available</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Exchange Rate Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Exchange Rate Summary (Last 5 Dates)</h6>
+                </div>
+                <div class="card-body">
+                    {% if exchange_rate_summary %}
+                        {% for rate_data in exchange_rate_summary %}
+                            <div class="mb-3">
+                                <h6 class="font-weight-bold">{{ rate_data.fic_mis_date|date:'Y-m-d' }} 
+                                    <small class="text-muted">({{ rate_data.total_rates }} rates)</small>
+                                </h6>
+                                {% if rate_data.rates %}
+                                    <div class="row">
+                                        {% for rate in rate_data.rates %}
+                                            <div class="col-md-3 mb-2">
+                                                <div class="card card-body p-2 bg-light">
+                                                    <small>
+                                                        <strong>{{ rate.v_from_ccy_code }} → {{ rate.v_to_ccy_code }}</strong><br>
+                                                        Rate: {{ rate.n_exchange_rate|floatformat:4 }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted small">No exchange rates available for this date.</p>
+                                {% endif %}
+                            </div>
+                            {% if not forloop.last %}<hr>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No exchange rate data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateManualDate() {
+    const quickSelect = document.getElementById('quick_select');
+    const manualDate = document.getElementById('manual_date');
+    if (quickSelect.value) {
+        manualDate.value = quickSelect.value;
+    }
+}
+
+// Auto-submit form when manual date changes
+document.getElementById('manual_date').addEventListener('change', function() {
+    const quickSelect = document.getElementById('quick_select');
+    quickSelect.value = this.value;
+});
+</script>
+
+<script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Initialize collapse state
+                var toggleButtons = document.querySelectorAll('[data-toggle="collapse"]');
+                toggleButtons.forEach(function(button) {
+                    var target = document.querySelector(button.getAttribute('data-target'));
+                    if (target) {
+                        button.setAttribute('aria-expanded', target.classList.contains('show'));
+                        updateIcon(button);
+                    }
+                    
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        var target = document.querySelector(this.getAttribute('data-target'));
+                        if (target) {
+                            target.classList.toggle('show');
+                            this.setAttribute('aria-expanded', target.classList.contains('show'));
+                            updateIcon(this);
+                        }
+                    });
+                });
+
+                function updateIcon(button) {
+                    var icon = button.querySelector('.fa-chevron-down');
+                    if (icon) {
+                        icon.style.transform = button.getAttribute('aria-expanded') === 'true' ? 'rotate(180deg)' : 'rotate(0deg)';
+                    }
+                }
+
+                // Handle show more/less products
+                var productToggles = document.querySelectorAll('.toggle-products');
+                productToggles.forEach(function(toggle) {
+                    toggle.addEventListener('click', function() {
+                        var container = this.closest('.card-body');
+                        var extraProducts = container.querySelectorAll('.extra-product');
+                        var showText = this.querySelector('.show-text');
+                        var hideText = this.querySelector('.hide-text');
+                        var icon = this.querySelector('.fa-chevron-down');
+                        
+                        extraProducts.forEach(function(product) {
+                            product.classList.toggle('d-none');
+                        });
+                        
+                        showText.classList.toggle('d-none');
+                        hideText.classList.toggle('d-none');
+                        
+                        if (icon) {
+                            icon.style.transform = showText.classList.contains('d-none') ? 'rotate(180deg)' : 'rotate(0deg)';
+                        }
+                    });
+                });
+            });
+            </script>
+
+<style>
+/* Import Montserrat font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+/* Base styles */
+body {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+}
+
+/* Existing styles */
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.table-responsive {
+    border-radius: 0.35rem;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.form-control-sm {
+    font-size: 0.875rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.text-xs {
+    font-size: 0.7rem;
+}
+
+.product-box {
+    margin-bottom: 10px;
+}
+
+.currency-breakdown .d-flex {
+    margin-bottom: 5px;
+}
+
+.extra-product {
+    display: none;
+}
+
+.toggle-products {
+    font-size: 0.875rem;
+    padding: 0.4rem 0.8rem;
+}
+
+.show-text {
+    display: inline-block;
+}
+
+.hide-text {
+    display: none;
+}
+
+/* Adjust heading sizes for Montserrat */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+}
+
+.h3 {
+    font-size: 1.5rem;
+}
+
+.h5 {
+    font-size: 1.1rem;
+}
+
+.h6 {
+    font-size: 1rem;
+}
+
+/* Adjust table text */
+.table {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+}
+
+/* Adjust card text */
+.card-body {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+}
+
+.small {
+    font-size: 11px;
+}
+
+@media (max-width: 768px) {
+    .col-md-6.text-right {
+        text-align: left !important;
+        margin-top: 1rem;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

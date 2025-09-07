@@ -1,0 +1,1307 @@
+{% extends "base.html" %}
+
+{% block title %}Contractual Gap Report - Generate Report{% endblock %}
+
+{% block extra_head %}
+<style>
+    .container {
+        max-width: 700px;
+        margin: 80px auto 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        overflow: hidden;
+    }
+    
+    .header {
+        background: linear-gradient(135deg, #d4d8d4 0%, #929992 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+    
+    .header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+    
+    .header p {
+        margin: 10px 0 0 0;
+        opacity: 0.9;
+        font-size: 16px;
+    }
+    
+    .form-container {
+        padding: 40px;
+    }
+    
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+    }
+    
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e1e5e9;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+        box-sizing: border-box;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+    }
+    
+    .btn {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        padding: 14px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+    }
+    
+    .btn:active {
+        transform: translateY(0);
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        margin-top: 10px;
+    }
+    
+    .btn-secondary:hover {
+        box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+    }
+    
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .help-text {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .info-box {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .info-box h3 {
+        margin: 0 0 15px 0;
+        color: #333;
+        font-size: 18px;
+    }
+    
+    .info-box ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    
+    .info-box li {
+        margin-bottom: 8px;
+        color: #555;
+    }
+    
+    .quick-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .quick-actions button {
+        flex: 1;
+        padding: 10px;
+        background: #e9ecef;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-actions button:hover {
+        background: #dee2e6;
+        border-color: #adb5bd;
+    }
+    
+    .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .loading.show {
+        display: block;
+    }
+    
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #4CAF50;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .available-tables {
+        background: #e8f5e8;
+        border: 1px solid #c3e6cb;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .available-tables h3 {
+        margin: 0 0 15px 0;
+        color: #155724;
+        font-size: 16px;
+    }
+    
+    .table-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .table-item {
+        background: white;
+        border: 1px solid #c3e6cb;
+        border-radius: 6px;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .table-item:hover {
+        background: #f8f9fa;
+        border-color: #4CAF50;
+        transform: translateY(-2px);
+    }
+    
+    .table-item.selected {
+        background: #4CAF50;
+        color: white;
+        border-color: #45a049;
+    }
+    
+    .table-date {
+        font-weight: bold;
+        font-size: 14px;
+    }
+    
+    .table-name {
+        font-size: 11px;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .table-item.selected .table-name {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .recent-reports {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 30px;
+    }
+    
+    .recent-reports h3 {
+        margin: 0 0 15px 0;
+        color: #333;
+        font-size: 16px;
+    }
+    
+    .recent-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .recent-item:last-child {
+        border-bottom: none;
+    }
+    
+    .recent-item a {
+        color: #4CAF50;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .recent-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .status-available {
+        background-color: #28a745;
+    }
+    
+    .status-empty {
+        background-color: #ffc107;
+    }
+    
+    .status-missing {
+        background-color: #dc3545;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            margin: 80px 10px 20px;
+            max-width: none;
+        }
+        
+        .form-container {
+            padding: 20px;
+        }
+        
+        .header {
+            padding: 20px;
+        }
+        
+        .quick-actions {
+            flex-direction: column;
+        }
+        
+        .table-grid {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>📊 Contractual Gap Report</h1>
+        <p>Generate detailed cash flow gap analysis</p>
+    </div>
+    
+    <div class="form-container">
+        <!-- Display Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% if available_tables %}
+        <div class="available-tables">
+            <h3>📅 Available Report Dates</h3>
+            <p>Click on a date to select it automatically:</p>
+            <div class="table-grid">
+                {% for table in available_tables %}
+                <div class="table-item" onclick="selectTableDate('{{ table.formatted_date }}')">
+                    <div class="table-date">{{ table.display_date }}</div>
+                    <div class="table-name">{{ table.table_name }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="info-box">
+            <h3>⚠️ No Report Tables Found</h3>
+            <p>No Report_Contractual tables were found in the database. Please ensure that:</p>
+            <ul>
+                <li>The report data loader has been executed</li>
+                <li>The Report_Contractual_&lt;YYYYMMDD&gt; tables have been created</li>
+                <li>You have the necessary database permissions</li>
+            </ul>
+        </div>
+        {% endif %}
+        
+        <div class="info-box">
+            <h3>📋 Before You Start</h3>
+            <ul>
+                <li>Ensure the report data has been loaded for your selected date</li>
+                <li>Verify that TimeBucketMaster is configured for your process</li>
+                <li>The report will show inflows, outflows, and net liquidity gaps</li>
+            </ul>
+        </div>
+        
+        <form method="post" id="reportForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="fic_mis_date">📅 Financial MIS Date</label>
+                <input type="date" 
+                       id="fic_mis_date" 
+                       name="fic_mis_date" 
+                       value="{{ fic_mis_date }}"
+                       required>
+                <div class="help-text">Select the date for which you want to generate the report</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="process_name">⚙️ Process Name</label>
+                <select id="process_name" name="process_name" required>
+                    <option value="">-- Select a Process --</option>
+                    {% for process in available_processes %}
+                        <option value="{{ process }}" 
+                                {% if process == process_name %}selected{% endif %}>
+                            {{ process }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <div class="help-text">Choose the process for which the report should be generated</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="currency">💱 Currency Filter</label>
+                <select id="currency" name="currency">
+                    <option value="all">-- All Currencies --</option>
+                    {% for currency in available_currencies %}
+                        <option value="{{ currency }}" 
+                                {% if currency == selected_currency %}selected{% endif %}>
+                            {{ currency }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <div class="help-text">Select a specific currency or show all currencies in separate sections</div>
+            </div>
+            
+            <div class="quick-actions">
+                <button type="button" onclick="setToday()">📅 Today</button>
+                <button type="button" onclick="setYesterday()">📅 Yesterday</button>
+                <button type="button" onclick="setLastWeek()">📅 Last Week</button>
+                {% if available_tables %}
+                <button type="button" onclick="setLatestAvailable()">📅 Latest Available</button>
+                {% endif %}
+            </div>
+            
+            <button type="submit" class="btn">
+                🚀 Generate Report
+            </button>
+            
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='{% url "alm_app:Contractual_Cons_gap_report_form_cons" %}'">
+                🔄 Reset Form
+            </button>
+        </form>
+        
+        <div class="loading" id="loadingDiv">
+            <div class="spinner"></div>
+            <p>Generating your report... Please wait.</p>
+        </div>
+        
+        {% if available_processes %}
+        <div class="recent-reports">
+            <h3>📈 Available Processes</h3>
+            {% for process in available_processes %}
+                <div class="recent-item">
+                    <span>
+                        <span class="status-indicator status-available"></span>
+                        {{ process }}
+                    </span>
+                    <a href="javascript:void(0)" onclick="selectProcess('{{ process }}')">Select</a>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Available tables data for JavaScript
+    const availableTables = [
+        {% for table in available_tables %}
+        {
+            date: '{{ table.formatted_date }}',
+            displayDate: '{{ table.display_date }}',
+            tableName: '{{ table.table_name }}'
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    function setToday() {
+        const today = new Date();
+        document.getElementById('fic_mis_date').value = today.toISOString().split('T')[0];
+        highlightSelectedDate();
+    }
+    
+    function setYesterday() {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        document.getElementById('fic_mis_date').value = yesterday.toISOString().split('T')[0];
+        highlightSelectedDate();
+    }
+    
+    function setLastWeek() {
+        const lastWeek = new Date();
+        lastWeek.setDate(lastWeek.getDate() - 7);
+        document.getElementById('fic_mis_date').value = lastWeek.toISOString().split('T')[0];
+        highlightSelectedDate();
+    }
+    
+    function setLatestAvailable() {
+        if (availableTables.length > 0) {
+            document.getElementById('fic_mis_date').value = availableTables[0].date;
+            highlightSelectedDate();
+        }
+    }
+    
+    function selectProcess(processName) {
+        document.getElementById('process_name').value = processName;
+        highlightSelectedDate();
+        
+        // Load currencies for the selected process
+        loadCurrenciesForProcess(processName);
+    }
+    
+    function loadCurrenciesForProcess(processName) {
+        const dateInput = document.getElementById('fic_mis_date');
+        const currencySelect = document.getElementById('currency');
+        
+        if (!dateInput.value || !processName) {
+            return;
+        }
+        
+        // Clear existing currency options except "All"
+        currencySelect.innerHTML = '<option value="all">-- All Currencies --</option>';
+        
+        // Show loading state
+        const loadingOption = document.createElement('option');
+        loadingOption.value = '';
+        loadingOption.textContent = 'Loading currencies...';
+        loadingOption.disabled = true;
+        currencySelect.appendChild(loadingOption);
+        
+        // Make AJAX call to get currencies
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', `/api/get-currencies/${dateInput.value}/${processName}/`, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                // Remove loading option
+                currencySelect.removeChild(loadingOption);
+                
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.currencies && response.currencies.length > 0) {
+                        response.currencies.forEach(currency => {
+                            const option = document.createElement('option');
+                            option.value = currency;
+                            option.textContent = currency;
+                            currencySelect.appendChild(option);
+                        });
+                    } else {
+                        const noDataOption = document.createElement('option');
+                        noDataOption.value = '';
+                        noDataOption.textContent = 'No currencies found';
+                        noDataOption.disabled = true;
+                        currencySelect.appendChild(noDataOption);
+                    }
+                } else {
+                    const errorOption = document.createElement('option');
+                    errorOption.value = '';
+                    errorOption.textContent = 'Error loading currencies';
+                    errorOption.disabled = true;
+                    currencySelect.appendChild(errorOption);
+                }
+            }
+        };
+        xhr.send();
+    }
+    
+    // Add event listener to process selection
+    document.getElementById('process_name').addEventListener('change', function() {
+        if (this.value) {
+            loadCurrenciesForProcess(this.value);
+        }
+    });
+    
+    // Add event listener to date change
+    document.getElementById('fic_mis_date').addEventListener('change', function() {
+        const processName = document.getElementById('process_name').value;
+        if (processName) {
+            loadCurrenciesForProcess(processName);
+        }
+    });
+    
+    function selectTableDate(dateString) {
+        document.getElementById('fic_mis_date').value = dateString;
+        highlightSelectedDate();
+    }
+    
+    function highlightSelectedDate() {
+        const selectedDate = document.getElementById('fic_mis_date').value;
+        const tableItems = document.querySelectorAll('.table-item');
+        
+        tableItems.forEach(item => {
+            item.classList.remove('selected');
+        });
+        
+        // Find and highlight the matching date
+        availableTables.forEach((table, index) => {
+            if (table.date === selectedDate) {
+                tableItems[index].classList.add('selected');
+            }
+        });
+    }
+    
+    // Show loading animation on form submit
+    document.getElementById('reportForm').addEventListener('submit', function() {
+        document.getElementById('loadingDiv').classList.add('show');
+        document.querySelector('.form-container').style.opacity = '0.5';
+    });
+    
+    // Set default date to today if not set
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('fic_mis_date');
+        if (!dateInput.value) {
+            setToday();
+        } else {
+            highlightSelectedDate();
+        }
+        
+        // Add event listener for date input changes
+        dateInput.addEventListener('change', highlightSelectedDate);
+    });
+    
+    // Add some validation
+    document.getElementById('reportForm').addEventListener('submit', function(e) {
+        const date = document.getElementById('fic_mis_date').value;
+        const process = document.getElementById('process_name').value;
+        
+        if (!date || !process) {
+            e.preventDefault();
+            alert('Please fill in both date and process name.');
+            document.getElementById('loadingDiv').classList.remove('show');
+            document.querySelector('.form-container').style.opacity = '1';
+            return false;
+        }
+        
+        // Check if date is not in the future
+        const selectedDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (selectedDate > today) {
+            e.preventDefault();
+            alert('Please select a date that is not in the future.');
+            document.getElementById('loadingDiv').classList.remove('show');
+            document.querySelector('.form-container').style.opacity = '1';
+            return false;
+        }
+        
+        // Check if the selected date has an available table
+        const hasAvailableTable = availableTables.some(table => table.date === date);
+        if (!hasAvailableTable && availableTables.length > 0) {
+            const proceed = confirm(
+                `The selected date (${date}) does not have an available report table. ` +
+                `Do you want to proceed anyway?`
+            );
+            if (!proceed) {
+                e.preventDefault();
+                document.getElementById('loadingDiv').classList.remove('show');
+                document.querySelector('.form-container').style.opacity = '1';
+                return false;
+            }
+        }
+    });
+</script>
+{% endblock %} 
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            margin-top: 10px;
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .info-box h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .info-box ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .info-box li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .quick-actions button {
+            flex: 1;
+            padding: 10px;
+            background: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .quick-actions button:hover {
+            background: #dee2e6;
+            border-color: #adb5bd;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .available-tables {
+            background: #e8f5e8;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .available-tables h3 {
+            margin: 0 0 15px 0;
+            color: #155724;
+            font-size: 16px;
+        }
+        
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .table-item {
+            background: white;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .table-item:hover {
+            background: #f8f9fa;
+            border-color: #4CAF50;
+            transform: translateY(-2px);
+        }
+        
+        .table-item.selected {
+            background: #4CAF50;
+            color: white;
+            border-color: #45a049;
+        }
+        
+        .table-date {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .table-name {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .table-item.selected .table-name {
+            color: rgba(255,255,255,0.8);
+        }
+        
+        .recent-reports {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .recent-reports h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .recent-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .recent-item:last-child {
+            border-bottom: none;
+        }
+        
+        .recent-item a {
+            color: #4CAF50;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .recent-item a:hover {
+            text-decoration: underline;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-available {
+            background-color: #28a745;
+        }
+        
+        .status-empty {
+            background-color: #ffc107;
+        }
+        
+        .status-missing {
+            background-color: #dc3545;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                max-width: none;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+            
+            .table-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Contractual Gap Report</h1>
+            <p>Generate detailed cash flow gap analysis</p>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <a href="{% url 'alm_app:home' %}" style="color: #007bff; text-decoration: none; margin: 0 15px;">🏠 Home</a>
+            <a href="{% url 'alm_app:adjustments_form' %}" style="color: #007bff; text-decoration: none; margin: 0 15px;">🔧 Manage Adjustments</a>
+        </div>
+        
+        <div class="form-container">
+            <!-- Display Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% if available_tables %}
+            <div class="available-tables">
+                <h3>📅 Available Report Dates</h3>
+                <p>Click on a date to select it automatically:</p>
+                <div class="table-grid">
+                    {% for table in available_tables %}
+                    <div class="table-item" onclick="selectTableDate('{{ table.formatted_date }}')">
+                        <div class="table-date">{{ table.display_date }}</div>
+                        <div class="table-name">{{ table.table_name }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="info-box">
+                <h3>⚠️ No Report Tables Found</h3>
+                <p>No Report_Contractual tables were found in the database. Please ensure that:</p>
+                <ul>
+                    <li>The report data loader has been executed</li>
+                    <li>The Report_Contractual_&lt;YYYYMMDD&gt; tables have been created</li>
+                    <li>You have the necessary database permissions</li>
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div class="info-box">
+                <h3>📋 Before You Start</h3>
+                <ul>
+                    <li>Ensure the report data has been loaded for your selected date</li>
+                    <li>Verify that TimeBucketMaster is configured for your process</li>
+                    <li>The report will show inflows, outflows, and net liquidity gaps</li>
+                </ul>
+            </div>
+            
+            <form method="post" id="reportForm">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="fic_mis_date">📅 Financial MIS Date</label>
+                    <input type="date" 
+                           id="fic_mis_date" 
+                           name="fic_mis_date" 
+                           value="{{ fic_mis_date }}"
+                           required>
+                    <div class="help-text">Select the date for which you want to generate the report</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="process_name">⚙️ Process Name</label>
+                    <select id="process_name" name="process_name" required>
+                        <option value="">-- Select a Process --</option>
+                        {% for process in available_processes %}
+                            <option value="{{ process }}" 
+                                    {% if process == process_name %}selected{% endif %}>
+                                {{ process }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div class="help-text">Choose the process for which the report should be generated</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="currency">💱 Currency Filter</label>
+                    <select id="currency" name="currency">
+                        <option value="all">-- All Currencies --</option>
+                        {% for currency in available_currencies %}
+                            <option value="{{ currency }}" 
+                                    {% if currency == selected_currency %}selected{% endif %}>
+                                {{ currency }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div class="help-text">Select a specific currency or show all currencies in separate sections</div>
+                </div>
+                
+                <div class="quick-actions">
+                    <button type="button" onclick="setToday()">📅 Today</button>
+                    <button type="button" onclick="setYesterday()">📅 Yesterday</button>
+                    <button type="button" onclick="setLastWeek()">📅 Last Week</button>
+                    {% if available_tables %}
+                    <button type="button" onclick="setLatestAvailable()">📅 Latest Available</button>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="btn">
+                    🚀 Generate Report
+                </button>
+                
+                <button type="button" class="btn btn-secondary" onclick="window.location.href='{% url "alm_app:Contractual_Cons_gap_report_form_cons" %}'">
+                    🔄 Reset Form
+                </button>
+            </form>
+            
+            <div class="loading" id="loadingDiv">
+                <div class="spinner"></div>
+                <p>Generating your report... Please wait.</p>
+            </div>
+            
+            {% if available_processes %}
+            <div class="recent-reports">
+                <h3>📈 Available Processes</h3>
+                {% for process in available_processes %}
+                    <div class="recent-item">
+                        <span>
+                            <span class="status-indicator status-available"></span>
+                            {{ process }}
+                        </span>
+                        <a href="javascript:void(0)" onclick="selectProcess('{{ process }}')">Select</a>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        // Available tables data for JavaScript
+        const availableTables = [
+            {% for table in available_tables %}
+            {
+                date: '{{ table.formatted_date }}',
+                displayDate: '{{ table.display_date }}',
+                tableName: '{{ table.table_name }}'
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        function setToday() {
+            const today = new Date();
+            document.getElementById('fic_mis_date').value = today.toISOString().split('T')[0];
+            highlightSelectedDate();
+        }
+        
+        function setYesterday() {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            document.getElementById('fic_mis_date').value = yesterday.toISOString().split('T')[0];
+            highlightSelectedDate();
+        }
+        
+        function setLastWeek() {
+            const lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
+            document.getElementById('fic_mis_date').value = lastWeek.toISOString().split('T')[0];
+            highlightSelectedDate();
+        }
+        
+        function setLatestAvailable() {
+            if (availableTables.length > 0) {
+                document.getElementById('fic_mis_date').value = availableTables[0].date;
+                highlightSelectedDate();
+            }
+        }
+        
+        function selectProcess(processName) {
+            document.getElementById('process_name').value = processName;
+            highlightSelectedDate();
+            
+            // Load currencies for the selected process
+            loadCurrenciesForProcess(processName);
+        }
+        
+        function loadCurrenciesForProcess(processName) {
+            const dateInput = document.getElementById('fic_mis_date');
+            const currencySelect = document.getElementById('currency');
+            
+            if (!dateInput.value || !processName) {
+                return;
+            }
+            
+            // Clear existing currency options except "All"
+            currencySelect.innerHTML = '<option value="all">-- All Currencies --</option>';
+            
+            // Show loading state
+            const loadingOption = document.createElement('option');
+            loadingOption.value = '';
+            loadingOption.textContent = 'Loading currencies...';
+            loadingOption.disabled = true;
+            currencySelect.appendChild(loadingOption);
+            
+            // Make AJAX call to get currencies
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/api/get-currencies/${dateInput.value}/${processName}/`, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    // Remove loading option
+                    currencySelect.removeChild(loadingOption);
+                    
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.currencies && response.currencies.length > 0) {
+                            response.currencies.forEach(currency => {
+                                const option = document.createElement('option');
+                                option.value = currency;
+                                option.textContent = currency;
+                                currencySelect.appendChild(option);
+                            });
+                        } else {
+                            const noDataOption = document.createElement('option');
+                            noDataOption.value = '';
+                            noDataOption.textContent = 'No currencies found';
+                            noDataOption.disabled = true;
+                            currencySelect.appendChild(noDataOption);
+                        }
+                    } else {
+                        const errorOption = document.createElement('option');
+                        errorOption.value = '';
+                        errorOption.textContent = 'Error loading currencies';
+                        errorOption.disabled = true;
+                        currencySelect.appendChild(errorOption);
+                    }
+                }
+            };
+            xhr.send();
+        }
+        
+        // Add event listener to process selection
+        document.getElementById('process_name').addEventListener('change', function() {
+            if (this.value) {
+                loadCurrenciesForProcess(this.value);
+            }
+        });
+        
+        // Add event listener to date change
+        document.getElementById('fic_mis_date').addEventListener('change', function() {
+            const processName = document.getElementById('process_name').value;
+            if (processName) {
+                loadCurrenciesForProcess(processName);
+            }
+        });
+        
+        function selectTableDate(dateString) {
+            document.getElementById('fic_mis_date').value = dateString;
+            highlightSelectedDate();
+        }
+        
+        function highlightSelectedDate() {
+            const selectedDate = document.getElementById('fic_mis_date').value;
+            const tableItems = document.querySelectorAll('.table-item');
+            
+            tableItems.forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Find and highlight the matching date
+            availableTables.forEach((table, index) => {
+                if (table.date === selectedDate) {
+                    tableItems[index].classList.add('selected');
+                }
+            });
+        }
+        
+        // Show loading animation on form submit
+        document.getElementById('reportForm').addEventListener('submit', function() {
+            document.getElementById('loadingDiv').classList.add('show');
+            document.querySelector('.form-container').style.opacity = '0.5';
+        });
+        
+        // Set default date to today if not set
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('fic_mis_date');
+            if (!dateInput.value) {
+                setToday();
+            } else {
+                highlightSelectedDate();
+            }
+            
+            // Add event listener for date input changes
+            dateInput.addEventListener('change', highlightSelectedDate);
+        });
+        
+        // Add some validation
+        document.getElementById('reportForm').addEventListener('submit', function(e) {
+            const date = document.getElementById('fic_mis_date').value;
+            const process = document.getElementById('process_name').value;
+            
+            if (!date || !process) {
+                e.preventDefault();
+                alert('Please fill in both date and process name.');
+                document.getElementById('loadingDiv').classList.remove('show');
+                document.querySelector('.form-container').style.opacity = '1';
+                return false;
+            }
+            
+            // Check if date is not in the future
+            const selectedDate = new Date(date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate > today) {
+                e.preventDefault();
+                alert('Please select a date that is not in the future.');
+                document.getElementById('loadingDiv').classList.remove('show');
+                document.querySelector('.form-container').style.opacity = '1';
+                return false;
+            }
+            
+            // Check if the selected date has an available table
+            const hasAvailableTable = availableTables.some(table => table.date === date);
+            if (!hasAvailableTable && availableTables.length > 0) {
+                const proceed = confirm(
+                    `The selected date (${date}) does not have an available report table. ` +
+                    `Do you want to proceed anyway?`
+                );
+                if (!proceed) {
+                    e.preventDefault();
+                    document.getElementById('loadingDiv').classList.remove('show');
+                    document.querySelector('.form-container').style.opacity = '1';
+                    return false;
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

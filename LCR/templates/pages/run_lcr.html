@@ -1,0 +1,416 @@
+{# templates/pages/run_lcr.html #}
+{% extends "base/base.html" %}
+{% load tailwind_tags %}
+
+{% block content %}
+<div class="text-[15px]">
+  <h1 class="text-base font-semibold mb-4">Run LCR Pipeline</h1>
+
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[13px]">
+    <!-- Left: date picker + run button -->
+    <form id="run-form" method="post" class="flex flex-wrap items-center gap-2">
+      {% csrf_token %}
+      <label class="font-medium">Select Date:</label>
+      <select name="reporting_date" required
+              class="border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500">
+        <option value="">— pick a date —</option>
+        {% for d in reporting_dates %}
+          <option value="{{ d|date:'Y-m-d' }}" {% if d == selected_date %}selected{% endif %}>
+            {{ d|date:"F j, Y" }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" id="runBtn"
+              class="inline-flex items-center gap-2 px-4 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition">
+        <!-- play icon -->
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Run
+      </button>
+    </form>
+
+    <!-- Right: view previous runs -->
+    <a href="{% url 'LCR:previous_runs' %}"
+       class="inline-flex items-center gap-2 px-4 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition">
+      <!-- clock/history icon -->
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      View Previous Runs
+    </a>
+  </div>
+
+  <!-- Progress Bar Section -->
+  <div id="progressContainer" class="hidden mb-6">
+    <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-medium text-gray-900">Pipeline Progress</h3>
+        <button type="button" id="cancelBtn"
+                class="text-xs text-gray-500 hover:text-red-600 transition">
+          Cancel
+        </button>
+      </div>
+      <div class="bg-gray-200 rounded-full h-2 mb-2">
+        <div id="progressBar" class="bg-orange-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
+      <div class="flex justify-between items-center">
+        <p id="progressText" class="text-xs text-gray-600">Initializing pipeline…</p>
+        <span id="progressPercentage" class="text-xs font-medium text-gray-900">0%</span>
+      </div>
+    </div>
+  </div>
+
+  {% if run_name %}
+    <p class="mb-4 text-[13px]"><strong>Run:</strong> {{ run_name }}</p>
+  {% endif %}
+
+  <!-- Default: Show previous results if available -->
+  {% if processes %}
+    <div id="previousResultsTable" class="overflow-x-auto mb-4">
+      <h3 class="text-sm font-medium mb-2">Previous Run Results</h3>
+      <table class="w-full text-[13px] border-collapse border border-gray-300 bg-white">
+        <thead>
+          <tr class="bg-[#171426] text-white">
+            <th class="px-2 py-2 border border-gray-300 text-left">Process Name</th>
+            <th class="px-2 py-2 border border-gray-300 text-left">Description</th>
+            <th class="px-2 py-2 border border-gray-300 text-left">Status</th>
+            <th class="px-2 py-2 border border-gray-300 text-left">Logs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for proc in processes %}
+            <tr class="border-t hover:bg-gray-50">
+              <td class="px-2 py-2 border border-gray-300">{{ proc.name }}</td>
+              <td class="px-2 py-2 border border-gray-300">{{ proc.description }}</td>
+              <td class="px-2 py-2 border border-gray-300">
+                {% if proc.status == 'Success' %}
+                  <span class="text-green-600">{{ proc.status }}</span>
+                {% elif proc.status == 'Failed' %}
+                  <span class="text-red-600">{{ proc.status }}</span>
+                {% else %}
+                  <span class="text-blue-600">{{ proc.status }}</span>
+                {% endif %}
+              </td>
+              <td class="px-2 py-2 border border-gray-300">
+                {% if proc.log_url %}
+                  <a href="{{ proc.log_url }}" target="_blank" class="text-indigo-600 hover:underline">
+                    Download
+                  </a>
+                {% else %}
+                  &mdash;
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <!-- Dynamic Progress Table - Hidden by default, shown when running -->
+  <div id="progressTable" class="overflow-x-auto mb-4 hidden">
+    <h3 class="text-sm font-medium mb-2">Current Run Progress</h3>
+    <table class="w-full text-[13px] border-collapse border border-gray-300 bg-white">
+      <thead>
+        <tr class="bg-[#171426] text-white">
+          <th class="px-2 py-2 border border-gray-300 text-left">Process Name</th>
+          <th class="px-2 py-2 border border-gray-300 text-left">Description</th>
+          <th class="px-2 py-2 border border-gray-300 text-left">Status</th>
+          <th class="px-2 py-2 border border-gray-300 text-left">Logs</th>
+        </tr>
+      </thead>
+      <tbody id="processTableBody">
+        <tr data-process="validation" class="border-t hover:bg-gray-50">
+          <td class="px-2 py-2 border border-gray-300">Data Validation</td>
+          <td class="px-2 py-2 border border-gray-300">Validate input data format and integrity</td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="status-cell text-gray-500">Pending</span>
+          </td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="log-cell">&mdash;</span>
+          </td>
+        </tr>
+        <tr data-process="hqla" class="border-t hover:bg-gray-50">
+          <td class="px-2 py-2 border border-gray-300">HQLA Processing</td>
+          <td class="px-2 py-2 border border-gray-300">Process High-Quality Liquid Assets data</td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="status-cell text-gray-500">Pending</span>
+          </td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="log-cell">&mdash;</span>
+          </td>
+        </tr>
+        <tr data-process="lcr" class="border-t hover:bg-gray-50">
+          <td class="px-2 py-2 border border-gray-300">LCR Calculation</td>
+          <td class="px-2 py-2 border border-gray-300">Calculate Liquidity Coverage Ratio</td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="status-cell text-gray-500">Pending</span>
+          </td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="log-cell">&mdash;</span>
+          </td>
+        </tr>
+        <tr data-process="nsfr" class="border-t hover:bg-gray-50">
+          <td class="px-2 py-2 border border-gray-300">NSFR Calculation</td>
+          <td class="px-2 py-2 border border-gray-300">Calculate Net Stable Funding Ratio</td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="status-cell text-gray-500">Pending</span>
+          </td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="log-cell">&mdash;</span>
+          </td>
+        </tr>
+        <tr data-process="reporting" class="border-t hover:bg-gray-50">
+          <td class="px-2 py-2 border border-gray-300">Report Generation</td>
+          <td class="px-2 py-2 border border-gray-300">Generate final reports and summaries</td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="status-cell text-gray-500">Pending</span>
+          </td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="log-cell">&mdash;</span>
+          </td>
+        </tr>
+        <tr data-process="finalization" class="border-t hover:bg-gray-50">
+          <td class="px-2 py-2 border border-gray-300">Finalization</td>
+          <td class="px-2 py-2 border border-gray-300">Finalize results and cleanup</td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="status-cell text-gray-500">Pending</span>
+          </td>
+          <td class="px-2 py-2 border border-gray-300">
+            <span class="log-cell">&mdash;</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  {% if all_successful %}
+    <div class="text-[13px] flex flex-wrap gap-2 justify-end items-center mb-4 mt-4">
+      <a href="{% url 'LCR:lcr_records' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded bg-[#171426] text-white hover:bg-[#695404] transition">
+        <!-- chart icon -->
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm5 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0h6"/>
+        </svg>
+        View LCR Report
+      </a>
+      <a href="{% url 'LCR:nsfr_records' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded bg-[#171426] text-white hover:bg-[#695404] transition">
+        <!-- chart icon -->
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm5 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0h6"/>
+        </svg>
+        View NSFR Report
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+{# Full-screen overlay kept as a fallback (unused by default) #}
+<div id="run-overlay" class="fixed inset-0 z-[60] hidden bg-black/40 backdrop-blur-[1px]">
+  <div class="min-h-full w-full flex items-center justify-center">
+    <div class="flex flex-col items-center gap-3">
+      <div class="h-12 w-12 rounded-full border-4 border-white/30 border-t-white animate-spin"></div>
+      <div class="text-white text-sm">Running pipeline… please wait</div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('run-form');
+  const progressContainer = document.getElementById('progressContainer');
+  const progressBar = document.getElementById('progressBar');
+  const progressText = document.getElementById('progressText');
+  const progressPercentage = document.getElementById('progressPercentage');
+  const runBtn = document.getElementById('runBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+
+  const previousResultsTable = document.getElementById('previousResultsTable');
+  const progressTable = document.getElementById('progressTable');
+
+  // MUST match your <tr data-process="..."> order
+  const STAGES = [
+    { key: 'validation',   text: 'Validating input data…' },
+    { key: 'hqla',         text: 'Processing HQLA data…' },
+    { key: 'lcr',          text: 'Calculating LCR ratios…' },
+    { key: 'nsfr',         text: 'Generating NSFR calculations…' },
+    { key: 'reporting',    text: 'Creating reports…' },
+    { key: 'finalization', text: 'Finalizing results…' },
+  ];
+
+  // Duration per stage (ms). Adjust as desired.
+  const STAGE_DURATION = [1200, 1800, 1500, 1500, 1200, 900];
+
+  let stageIndex = -1;    // -1 = not started
+  let stageElapsed = 0;   // ms in current stage
+  let ticker = null;
+  let lastTime = null;
+
+  function qRow(key) {
+    return document.querySelector('tr[data-process="' + key + '"]');
+  }
+  function setCellStatus(row, html, cls) {
+    const c = row.querySelector('.status-cell');
+    c.className = 'status-cell ' + (cls || '');
+    c.innerHTML = html;
+  }
+  function setCellLog(row, html) {
+    const c = row.querySelector('.log-cell');
+    if (c) c.innerHTML = html;
+  }
+
+  function statusPendingHTML() {
+    return 'Pending';
+  }
+  function statusRunningHTML() {
+    return '<span class="inline-flex items-center gap-1">' +
+           '<div class="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>' +
+           'Running</span>';
+  }
+  function statusSuccessHTML() {
+    return '<span class="inline-flex items-center gap-1">' +
+           '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+           '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
+           'Success</span>';
+  }
+
+  function resetRowsToPending() {
+    STAGES.forEach(s => {
+      const r = qRow(s.key);
+      setCellStatus(r, statusPendingHTML(), 'text-gray-500');
+      setCellLog(r, '&mdash;');
+    });
+  }
+
+  function paintStatuses() {
+    for (let i = 0; i < STAGES.length; i++) {
+      const r = qRow(STAGES[i].key);
+      if (i < stageIndex) {
+        setCellStatus(r, statusSuccessHTML(), 'text-green-600 font-medium');
+        setCellLog(r, '<a href="#" class="text-indigo-600 hover:underline">Download</a>');
+      } else if (i === stageIndex) {
+        setCellStatus(r, statusRunningHTML(), 'text-blue-600 font-medium');
+        setCellLog(r, '&mdash;');
+      } else {
+        setCellStatus(r, statusPendingHTML(), 'text-gray-500');
+        setCellLog(r, '&mdash;');
+      }
+    }
+  }
+
+  function progressPercent() {
+    const totalDur = STAGE_DURATION.reduce((a,b)=>a+b,0);
+    const doneDur = STAGE_DURATION.slice(0, Math.max(0, stageIndex)).reduce((a,b)=>a+b,0);
+    const curDur  = stageIndex >= 0 ? STAGE_DURATION[stageIndex] : 1;
+    const part    = stageIndex >= 0 ? Math.min(stageElapsed / curDur, 1) : 0;
+    return Math.min(100, Math.round(((doneDur + part*curDur) / totalDur) * 100));
+  }
+
+  function updateUI() {
+    const p = progressPercent();
+    progressBar.style.width = p + '%';
+    progressPercentage.textContent = p + '%';
+
+    if (stageIndex >= 0 && stageIndex < STAGES.length) {
+      progressText.textContent = STAGES[stageIndex].text;
+    } else if (stageIndex >= STAGES.length) {
+      progressText.textContent = 'Pipeline completed successfully!';
+    } else {
+      progressText.textContent = 'Initializing pipeline…';
+    }
+  }
+
+  function tick(dt) {
+    stageElapsed += dt;
+
+    if (stageIndex === -1) {
+      stageIndex = 0;
+      stageElapsed = 0;
+      paintStatuses();
+    } else if (stageIndex < STAGES.length) {
+      if (stageElapsed >= STAGE_DURATION[stageIndex]) {
+        // finish current stage, advance
+        stageIndex += 1;
+        stageElapsed = 0;
+        paintStatuses();
+
+        if (stageIndex >= STAGES.length) {
+          updateUI();
+          stopTicker();
+          setTimeout(() => { form.submit(); }, 700);
+          return;
+        }
+      }
+    }
+
+    updateUI();
+  }
+
+  function onFrame(ts) {
+    if (!lastTime) lastTime = ts;
+    const dt = ts - lastTime;
+    lastTime = ts;
+    tick(dt);
+    if (ticker) requestAnimationFrame(onFrame);
+  }
+
+  function startTicker() {
+    if (ticker) return;
+    ticker = true;
+    lastTime = null;
+    requestAnimationFrame(onFrame);
+  }
+  function stopTicker() { ticker = null; }
+
+  function startRunUI() {
+    if (previousResultsTable) previousResultsTable.classList.add('hidden');
+    progressTable.classList.remove('hidden');
+    progressContainer.classList.remove('hidden');
+    runBtn.disabled = true;
+    runBtn.classList.add('opacity-70', 'cursor-not-allowed');
+  }
+
+  function resetUI() {
+    stopTicker();
+    stageIndex = -1;
+    stageElapsed = 0;
+    progressBar.style.width = '0%';
+    progressPercentage.textContent = '0%';
+    progressText.textContent = 'Initializing pipeline…';
+    resetRowsToPending();
+    progressTable.classList.add('hidden');
+    progressContainer.classList.add('hidden');
+    if (previousResultsTable) previousResultsTable.classList.remove('hidden');
+    runBtn.disabled = false;
+    runBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+  }
+
+  // Submit -> simulate live progress, then submit for real
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const dateSelect = form.querySelector('select[name="reporting_date"]');
+    if (!dateSelect.value) {
+      alert('Please select a reporting date.');
+      return;
+    }
+    startRunUI();
+    resetRowsToPending();
+    startTicker();
+  });
+
+  // Cancel -> abort simulation, restore UI
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', resetUI);
+  }
+});
+</script>
+{% endblock %}

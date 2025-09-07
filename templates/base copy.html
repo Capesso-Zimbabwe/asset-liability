@@ -1,0 +1,313 @@
+
+{% load static tailwind_tags %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Capesso ALM{% endblock %}</title>
+    {% tailwind_css %}
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.5/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            margin: 0;
+            background-color: #ffffff;
+        }
+
+        /* Custom hover effects */
+        .sidebar-item:hover {
+            background-color: rgba(0, 0, 0, 0.05) !important;
+            transition: background-color 200ms ease-in-out !important;
+        }
+
+        /* Custom scrollbar styles */
+        .overflow-y-auto {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="text-[12px] bg-white">
+    {% if not request.user.is_authenticated %}
+        {% if request.path != '/login/' %}
+            <script>window.location.href = '/login/';</script>
+        {% else %}
+    {% block layout %}{% endblock %}
+        {% endif %}
+    {% else %}
+        {% if request.path == '/login/' %}
+            <script>window.location.href = '/dashboard/';</script>
+        {% else %}
+            <!-- Header -->
+            <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+                <div class="flex items-center justify-between px-4 py-3">
+                    <!-- Left side - Logo and Toggle -->
+                    <div class="flex items-center">
+                        <button id="sidebar-toggle" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 lg:hidden">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            </svg>
+                        </button>
+                        <div class="flex items-center ml-4">
+                            <img src="{% static 'images/icon.webp' %}" alt="ALM Logo" class="h-8 w-8 rounded-full">
+                            <span class="ml-2 text-lg font-semibold text-gray-800">Asset Liability Management</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Right side - User menu and options -->
+                    <div class="flex items-center space-x-4">
+                        <!-- API Documentation -->
+                        <a href="/api/docs" class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            API
+                        </a>
+
+                        <!-- Settings -->
+                        <a href="/settings" class="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Settings
+                        </a>
+
+                        <!-- User Profile -->
+                        <div class="relative">
+                            <button id="userMenuButton" class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <span class="text-gray-600 font-semibold">
+                                        {% if user.first_name %}{{ user.first_name.0 }}{% else %}{{ user.username.0|upper }}{% endif %}
+                                    </span>
+                                </div>
+                                <span class="text-sm font-medium text-gray-700">
+                                    {% if user.first_name %}{{ user.first_name }}{% else %}{{ user.username }}{% endif %}
+                                </span>
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
+                                <a href="/admin/" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Panel</a>
+                                <a href="{% url 'alm_app:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Sidebar -->
+            <aside id="sidebar" class="fixed left-0 top-[64px] h-[calc(100vh-64px)] w-64 bg-white border-r border-gray-200 transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out overflow-y-auto">
+                <nav class="p-4 space-y-2">
+                    <!-- Dashboard -->
+                    <a href="{% url 'alm_app:dashboard' %}" class="sidebar-item flex items-center p-2 text-gray-700 rounded-lg">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        <span class="ml-3">Dashboard</span>
+                    </a>
+
+                    <!-- Cash Flows -->
+                    <a href="{% url 'alm_app:execute_view' %}" class="sidebar-item flex items-center p-2 text-gray-700 rounded-lg">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="ml-3"> Execution</span>
+                    </a>
+                    <a href="{% url 'alm_app:time_bucket_list' %}" class="sidebar-item flex items-center p-2 text-gray-700 rounded-lg">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="ml-3">Time Buckets</span>
+                    </a>
+
+                    <a href="{% url 'alm_app:pattern-list' %}" class="sidebar-item flex items-center p-2 text-gray-700 rounded-lg">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="ml-3">Behavioural Patterns</span>
+                    </a>
+
+
+                    <!-- Reports Section -->
+                    <div class="space-y-1">
+                        <button type="button" class="sidebar-item flex items-center w-full p-2 text-gray-700 rounded-lg" data-collapse-toggle="reports-menu">
+                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span class="flex-1 ml-3 text-left">Reports</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="reports-menu" class="hidden pl-6 space-y-1">
+                            <a href="{% url 'alm_app:contractual_gap_report_form' %}" class="sidebar-item block p-2 text-gray-700 rounded-lg">Contractual Gap Base</a>
+                            <a href="{% url 'alm_app:adjustments_form' %}" class="sidebar-item block p-2 text-gray-700 rounded-lg">Contractual Adjustments</a>
+                            <a href="{% url 'alm_app:Contractual_Cons_gap_report_form_cons' %}" class="sidebar-item block p-2 text-gray-700 rounded-lg">Contractual Gap Cons</a>
+                            <a href="{% url 'alm_app:behavioural_gap_report_form_cons' %}" class="sidebar-item block p-2 text-gray-700 rounded-lg">Behavioural Gap</a>
+                            <a href="{% url 'alm_app:rate_sensitive_gap_report_form_cons' %}" class="sidebar-item block p-2 text-gray-700 rounded-lg">Rate Sensitive Gap</a>
+
+
+
+                        </div>
+                    </div>
+                    
+                    <!-- Data Management Section -->
+                    <div class="space-y-1">
+                        <button type="button" class="sidebar-item flex items-center w-full p-2 text-gray-700 rounded-lg" data-collapse-toggle="data-menu">
+                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                            </svg>
+                            <span class="flex-1 ml-3 text-left">Data Management</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="data-menu" class="hidden pl-6 space-y-1">
+                            <!-- Loan Products -->
+                            <div>
+                                <button type="button" class="sidebar-item flex items-center w-full p-2 text-gray-700 rounded-lg" data-collapse-toggle="loan-menu">
+                                    <span class="flex-1 text-left">Loan Products</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div id="loan-menu" class="hidden pl-4 space-y-1">
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">View Contracts</a>
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">Load Contracts</a>
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">Payment Schedule</a>
+                                </div>
+                            </div>
+
+                            
+
+                            <!-- Investments -->
+                            <div>
+                                <button type="button" class="sidebar-item flex items-center w-full p-2 text-gray-700 rounded-lg" data-collapse-toggle="investments-menu">
+                                    <span class="flex-1 text-left">Investments</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div id="investments-menu" class="hidden pl-4 space-y-1">
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">View Investments</a>
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">Load Investments</a>
+                                </div>
+                            </div>
+
+                            
+
+                            
+
+                            <!-- First Day Products -->
+                            <div>
+                                <button type="button" class="sidebar-item flex items-center w-full p-2 text-gray-700 rounded-lg" data-collapse-toggle="first-day-products-menu">
+                                    <span class="flex-1 text-left">First Day Products</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div id="first-day-products-menu" class="hidden pl-4 space-y-1">
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">View Products</a>
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">Upload Products</a>
+                                </div>
+                            </div>
+
+                            <!-- Credit Lines -->
+                            <div>
+                                <button type="button" class="sidebar-item flex items-center w-full p-2 text-gray-700 rounded-lg" data-collapse-toggle="credit-lines-menu">
+                                    <span class="flex-1 text-left">Credit Lines</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div id="credit-lines-menu" class="hidden pl-4 space-y-1">
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">View Credit Lines</a>
+                                    <a href="#" class="sidebar-item block p-2 text-gray-700 rounded-lg">Load Credit Lines</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="lg:ml-64 pt-[64px] min-h-screen bg-gray-50">
+                <div class="p-4">
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+
+            <script>
+                // User menu toggle
+                const userMenuButton = document.getElementById('userMenuButton');
+                const userMenu = document.getElementById('userMenu');
+                
+                if (userMenuButton && userMenu) {
+                    userMenuButton.addEventListener('click', () => {
+                        userMenu.classList.toggle('hidden');
+                    });
+
+                    // Close menu when clicking outside
+                    document.addEventListener('click', (event) => {
+                        if (!userMenuButton.contains(event.target) && !userMenu.contains(event.target)) {
+                            userMenu.classList.add('hidden');
+                        }
+                    });
+                }
+
+                // Sidebar toggle for mobile
+                const sidebarToggle = document.getElementById('sidebar-toggle');
+                const sidebar = document.getElementById('sidebar');
+                
+                if (sidebarToggle && sidebar) {
+                    sidebarToggle.addEventListener('click', () => {
+                        sidebar.classList.toggle('-translate-x-full');
+                    });
+                }
+
+                // Initialize Flowbite dropdowns
+                document.addEventListener('DOMContentLoaded', function() {
+                    const dropdownButtons = document.querySelectorAll('[data-collapse-toggle]');
+                    
+                    dropdownButtons.forEach(button => {
+                        const targetId = button.getAttribute('data-collapse-toggle');
+                        const targetElement = document.getElementById(targetId);
+                        
+                        button.addEventListener('click', () => {
+                            targetElement.classList.toggle('hidden');
+                        });
+                    });
+                });
+            </script>
+        {% endif %}
+    {% endif %}
+    
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+</body>
+</html>

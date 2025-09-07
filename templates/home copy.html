@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home - Asset & Liability Management{% endblock %}
+
+{% block body_class %}no-sidebar{% endblock %}
+
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    /* Override sidebar and main content styles for home page */
+    body.no-sidebar .sidebar,
+    body.no-sidebar .top-nav {
+        display: none !important;
+    }
+
+    body.no-sidebar .main-content {
+        margin-left: 0 !important;
+        padding-top: 64px !important;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 13px;
+    }
+
+    .app-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        padding: 1.5rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .app-card {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        overflow: hidden;
+        position: relative;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .app-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .app-card__header {
+        background: linear-gradient(135deg, #0E0B2B, #0E0B2B);
+        padding: 1.25rem;
+        color: white;
+    }
+
+    .app-card__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+    }
+
+    .app-card__subtitle {
+        font-size: 13px;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+        font-weight: 500;
+    }
+
+    .app-card__body {
+        padding: 1.25rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .app-card__description {
+        color: #4b5563;
+        margin-bottom: 1.25rem;
+        line-height: 1.5;
+        font-size: 13px;
+        font-weight: 400;
+    }
+
+    .app-card__features {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 1.25rem 0;
+        flex: 1;
+    }
+
+    .app-card__feature {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        color: #374151;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .app-card__feature svg {
+        width: 1.15rem;
+        height: 1.15rem;
+        margin-right: 0.5rem;
+        color: #0E0B2B;
+    }
+
+    .app-card__link {
+        display: inline-block;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background-color: #0E0B2B;
+        color: white;
+        text-decoration: none;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        font-size: 13px;
+        transition: all 0.2s;
+        text-align: center;
+        margin-top: auto;
+        letter-spacing: 0.01em;
+    }
+
+    .app-card__link:hover {
+        background-color: #1d4ed8;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .welcome-section {
+        text-align: center;
+        padding: 2.5rem 1.5rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .welcome-title {
+        font-size: 1.75rem;
+        color: #1e293b;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+    }
+
+    .welcome-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.5;
+        font-weight: 400;
+    }
+
+    @media (min-width: 992px) {
+        .app-grid {
+            grid-template-columns: repeat(2, 1fr);
+            padding: 2rem;
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .welcome-section {
+            padding: 2rem 1rem;
+        }
+
+        .welcome-title {
+            font-size: 1.5rem;
+        }
+
+        .app-grid {
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        .app-card__header {
+            padding: 1rem;
+        }
+
+        .app-card__body {
+            padding: 1rem;
+        }
+
+        .app-card__title {
+            font-size: 1.15rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="welcome-section">
+    <h1 class="welcome-title">Welcome to Financial Risk Management</h1>
+    <p class="welcome-subtitle">Choose your application to manage assets, liabilities, and liquidity risks effectively.</p>
+</div>
+
+<div class="app-grid">
+    <!-- ALM Card -->
+    <div class="app-card">
+        <div class="app-card__header">
+            <h2 class="app-card__title">Asset & Liability Management</h2>
+            <p class="app-card__subtitle">Comprehensive ALM Solution</p>
+        </div>
+        <div class="app-card__body">
+            <p class="app-card__description">
+                Manage your institution's assets and liabilities with our advanced ALM system. Monitor gaps, analyze risks, and make informed decisions.
+            </p>
+            <ul class="app-card__features">
+                <li class="app-card__feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Gap Analysis
+                </li>
+                <li class="app-card__feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+                    </svg>
+                    Behavioral Patterns
+                </li>
+                <li class="app-card__feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Comprehensive Reports
+                </li>
+            </ul>
+            <a href="{% url 'alm_app:dashboard' %}" class="app-card__link">Launch ALM</a>
+        </div>
+    </div>
+
+    <!-- LRM Card -->
+    <div class="app-card">
+        <div class="app-card__header">
+            <h2 class="app-card__title">Liquidity Risk Management</h2>
+            <p class="app-card__subtitle">Advanced LRM Solution</p>
+        </div>
+        <div class="app-card__body">
+            <p class="app-card__description">
+                Monitor and manage liquidity risks with precision. Ensure compliance with regulatory requirements and maintain optimal liquidity levels.
+            </p>
+            <ul class="app-card__features">
+                <li class="app-card__feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Liquidity Monitoring
+                </li>
+                <li class="app-card__feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                    </svg>
+                    Risk Analytics
+                </li>
+                <li class="app-card__feature">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Compliance Tracking
+                </li>
+            </ul>
+            <a href="#" class="app-card__link">Launch LRM</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

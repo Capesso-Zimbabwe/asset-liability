@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+    }
+
+    .form-control.empty-field {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{{ title }}</h2>
+                <a href="{% url 'staging:view_coa' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="row mb-4">
+        <div class="col">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Add Form -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" class="row g-3" id="coaForm" novalidate>
+                {% csrf_token %}
+
+                <div class="col-md-6">
+                    <label for="v_common_coa_code" class="form-label">COA Code</label>
+                    <input type="text" class="form-control" id="v_common_coa_code" name="v_common_coa_code">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_common_coa_name" class="form-label">COA Name</label>
+                    <input type="text" class="form-control" id="v_common_coa_name" name="v_common_coa_name">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_account_type" class="form-label">Account Type</label>
+                    <input type="text" class="form-control" id="v_account_type" name="v_account_type">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_accrual_basis_code" class="form-label">Accrual Basis Code</label>
+                    <input type="text" class="form-control" id="v_accrual_basis_code" name="v_accrual_basis_code">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_rollup_signage_code" class="form-label">Rollup Signage Code</label>
+                    <input type="text" class="form-control" id="v_rollup_signage_code" name="v_rollup_signage_code">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="fic_mis_date" class="form-label">FIC MIS Date</label>
+                    <input type="date" class="form-control date-field" id="fic_mis_date" name="fic_mis_date">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="d_start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control date-field" id="d_start_date" name="d_start_date">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="d_end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control date-field" id="d_end_date" name="d_end_date">
+                </div>
+
+                <div class="col-12">
+                    <label for="v_common_coa_description" class="form-label">Description</label>
+                    <textarea class="form-control" id="v_common_coa_description" name="v_common_coa_description"
+                        rows="3"></textarea>
+                </div>
+
+                <div class="col-12">
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'staging:view_coa' %}" class="btn btn-outline-secondary px-4">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn px-4" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('coaForm');
+
+        // Function to handle empty fields
+        function handleEmptyField(field) {
+            if (!field.value.trim()) {
+                field.classList.add('empty-field');
+                // For date fields, ensure the value is completely empty
+                if (field.type === 'date') {
+                    field.value = '';
+                }
+            } else {
+                field.classList.remove('empty-field');
+            }
+        }
+
+        // Initialize all fields
+        document.querySelectorAll('.form-control').forEach(handleEmptyField);
+
+        // Handle changes to fields
+        document.querySelectorAll('.form-control').forEach(field => {
+            field.addEventListener('change', () => handleEmptyField(field));
+            field.addEventListener('input', () => handleEmptyField(field));
+        });
+
+        // Handle form submission
+        form.addEventListener('submit', function (e) {
+            // Clear any empty date fields
+            document.querySelectorAll('.date-field').forEach(function (dateField) {
+                if (!dateField.value.trim()) {
+                    dateField.value = '';
+                    dateField.removeAttribute('value');
+                }
+            });
+
+            // Clear any empty text fields
+            document.querySelectorAll('input[type="text"], textarea').forEach(function (field) {
+                if (!field.value.trim()) {
+                    field.value = '';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

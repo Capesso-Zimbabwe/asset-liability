@@ -1,0 +1,40 @@
+{% extends "layouts/auth.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Login - Capesso ALM{% endblock %}
+
+{% block auth_content %}
+    <div class="text-center mb-4">
+        <h2 class="h3 fw-bold text-dark">Welcome Back</h2>
+        <p class="text-muted mb-0">Please sign in to your account</p>
+    </div>
+
+    <form method="post" action="{% url 'alm_app:login' %}">
+    {% csrf_token %}
+    
+    {% for field in form %}
+        {% include "includes/field.html" with field=field %}
+    {% endfor %}
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+            <div class="d-flex">
+                <div class="ms-2">
+                    <h6 class="alert-heading mb-1">Error</h6>
+                    {% for error in form.non_field_errors %}
+                        <p class="mb-0">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="d-grid">
+        <button type="submit" class="btn btn-primary fw-medium">
+            Sign in
+        </button>
+    </div>
+</form>
+
+{% endblock %}
+

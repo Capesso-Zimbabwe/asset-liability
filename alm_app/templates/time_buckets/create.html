@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_create %}Create{% else %}Edit{% endif %} Time Buckets{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+    }
+    .bucket-entry {
+        transition: all 0.2s;
+    }
+    .bucket-entry:hover {
+        box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+    }
+    .remove-btn {
+        color: #dc3545;
+        background: none;
+        border: none;
+        font-size: 13px;
+    }
+    .remove-btn:hover {
+        color: #a71e2a;
+    }
+    /* Compact bucket header and spacing */
+    .bucket-entry .card-body {
+        padding: 0.5rem 0.75rem;
+    }
+    .bucket-entry.card {
+        margin-bottom: 0.5rem !important;
+    }
+    .bucket-entry .d-flex.mb-3 {
+        margin-bottom: 0.15rem !important;
+    }
+    .bucket-entry .card-title.bucket-number {
+        font-size: 0.95rem;
+        line-height: 1.15;
+        margin: 0;
+    }
+    .bucket-entry .row.g-3 {
+        row-gap: 0.25rem;
+    }
+    .bucket-entry label.form-label {
+        margin-bottom: 0.15rem;
+        font-size: 0.85rem;
+    }
+    .bucket-entry .form-control,
+    .bucket-entry .form-select {
+        padding: 0.25rem 0.5rem;
+        height: 2rem;
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold text-dark">{% if is_create %}Create{% else %}Edit{% endif %} Time Buckets</h1>
+    </div>
+
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" id="bucketForm">
+                {% csrf_token %}
+                <input type="hidden" name="bucket_count" id="bucketCount" value="{% if buckets %}{{ buckets|length }}{% else %}0{% endif %}">
+
+                <div id="bucketsContainer">
+                    {% if buckets %}
+                        {% for bucket in buckets %}
+                        <div class="bucket-entry card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="card-title bucket-number mb-0">Bucket #{{ forloop.counter }}</h5>
+                                    <button type="button" onclick="removeBucket(this)" class="remove-btn">Remove</button>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-medium" >Start Date</label>
+                                        <input type="date" name="start_date_{{ forloop.counter0 }}" 
+                                            value="{{ bucket.start_date|date:'Y-m-d' }}" required readonly
+                                            class="form-control" style="background-color: rgb(218, 226, 233);">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-medium">End Date</label>
+                                        <input type="date" name="end_date_{{ forloop.counter0 }}" 
+                                            value="{{ bucket.end_date|date:'Y-m-d' }}" required readonly
+                                            class="form-control" style="background-color: rgb(218, 226, 233);">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-medium">Frequency</label>
+                                        <input type="number" name="frequency_{{ forloop.counter0 }}" 
+                                            value="{{ bucket.frequency }}" required min="1"
+                                            class="form-control">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-medium">Multiplier</label>
+                                        <select name="multiplier_{{ forloop.counter0 }}" required class="form-select">
+                                            <option value="Days" {% if bucket.multiplier == 'Days' %}selected{% endif %}>Days</option>
+                                            <option value="Months" {% if bucket.multiplier == 'Months' %}selected{% endif %}>Months</option>
+                                            <option value="Years" {% if bucket.multiplier == 'Years' %}selected{% endif %}>Years</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" onclick="addBucket()" class="btn" style="background-color: rgb(218, 226, 233);">
+                        Add Bucket
+                    </button>
+                    <div>
+                        <button type="button" onclick="window.location.href='{% url 'alm_app:time_bucket_list' %}'" 
+                            class="btn btn-secondary me-2">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                            {% if is_create %}Create{% else %}Save Changes{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden bucket template -->
+<template id="bucketTemplate">
+    <div class="bucket-entry card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title bucket-number mb-0">Bucket #1</h5>
+                <button type="button" onclick="removeBucket(this)" class="remove-btn">Remove</button>
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">Start Date</label>
+                    <input type="date" name="start_date_0" required readonly class="form-control">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">End Date</label>
+                    <input type="date" name="end_date_0" required readonly class="form-control">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">Frequency</label>
+                    <input type="number" name="frequency_0" required min="1" class="form-control">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">Multiplier</label>
+                    <select name="multiplier_0" required class="form-select">
+                        <option value="Days">Days</option>
+                        <option value="Months">Months</option>
+                        <option value="Years">Years</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+let bucketCount = {% if buckets %}{{ buckets|length }}{% else %}0{% endif %};
+
+function formatDateToYYYYMMDD(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function parseYYYYMMDD(value) {
+    if (!value) return null;
+    const [y, m, d] = value.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const dt = new Date(y, m - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+    return dt;
+}
+
+function addByUnit(date, amount, unit) {
+    const dt = new Date(date.getTime());
+    if (unit === 'Days') {
+        dt.setDate(dt.getDate() + amount);
+    } else if (unit === 'Months') {
+        const day = dt.getDate();
+        dt.setMonth(dt.getMonth() + amount);
+        // Handle month overflow (e.g., adding 1 month to Jan 31)
+        if (dt.getDate() !== day) {
+            dt.setDate(0); // move to last day of previous month
+        }
+    } else if (unit === 'Years') {
+        const m = dt.getMonth();
+        const d = dt.getDate();
+        dt.setFullYear(dt.getFullYear() + amount);
+        if (dt.getMonth() !== m) {
+            dt.setDate(0);
+        }
+    }
+    return dt;
+}
+
+function getBucketAt(index) {
+    const entries = document.querySelectorAll('#bucketsContainer .bucket-entry');
+    const entry = entries[index];
+    if (!entry) return null;
+    return {
+        entry,
+        start: entry.querySelector('input[name^="start_date_"]'),
+        end: entry.querySelector('input[name^="end_date_"]'),
+        freq: entry.querySelector('input[name^="frequency_"]'),
+        mult: entry.querySelector('select[name^="multiplier_"]')
+    };
+}
+
+function recalcBucket(index) {
+    const b = getBucketAt(index);
+    if (!b) return;
+    const startDate = parseYYYYMMDD(b.start.value);
+    const freq = parseInt(b.freq.value, 10);
+    const unit = b.mult.value;
+    if (startDate && freq && unit) {
+        const endDate = addByUnit(startDate, freq, unit);
+        b.end.value = formatDateToYYYYMMDD(endDate);
+    }
+}
+
+function recomputeFrom(startIndex) {
+    const entries = document.querySelectorAll('#bucketsContainer .bucket-entry');
+    for (let i = startIndex; i < entries.length; i++) {
+        const current = getBucketAt(i);
+        if (!current) continue;
+        // For i > 0, set start to previous end
+        if (i > 0) {
+            const prev = getBucketAt(i - 1);
+            if (prev) {
+                current.start.value = prev.end.value || current.start.value;
+            }
+        }
+        recalcBucket(i);
+    }
+}
+
+function attachListeners(index) {
+    const b = getBucketAt(index);
+    if (!b) return;
+    const handler = () => {
+        recalcBucket(index);
+        // Cascade forward so next bucket start is this bucket's end
+        recomputeFrom(index + 1);
+    };
+    b.freq.addEventListener('input', handler);
+    b.mult.addEventListener('change', handler);
+    b.start.addEventListener('change', handler);
+}
+
+function reindexBuckets() {
+    const entries = document.querySelectorAll('#bucketsContainer .bucket-entry');
+    entries.forEach((entry, idx) => {
+        entry.querySelector('.bucket-number').textContent = `Bucket #${idx + 1}`;
+        // Rename inputs to maintain sequential indices for backend processing
+        const start = entry.querySelector('input[name^="start_date_"]');
+        const end = entry.querySelector('input[name^="end_date_"]');
+        const freq = entry.querySelector('input[name^="frequency_"]');
+        const mult = entry.querySelector('select[name^="multiplier_"]');
+        if (start) start.name = `start_date_${idx}`;
+        if (end) end.name = `end_date_${idx}`;
+        if (freq) freq.name = `frequency_${idx}`;
+        if (mult) mult.name = `multiplier_${idx}`;
+    });
+}
+
+function addBucket() {
+    const container = document.getElementById('bucketsContainer');
+    const template = document.getElementById('bucketTemplate');
+    const clone = template.content.cloneNode(true);
+
+    // Update input names to next index
+    clone.querySelectorAll('input, select').forEach(input => {
+        input.name = input.name.replace('_0', `_${bucketCount}`);
+    });
+
+    // If this will be the first bucket, set the start date before append
+    const isFirst = container.querySelectorAll('.bucket-entry').length === 0;
+    if (isFirst) {
+        const startInputInClone = clone.querySelector('input[name^="start_date_"]');
+        if (startInputInClone) {
+            startInputInClone.value = formatDateToYYYYMMDD(new Date());
+        }
+    }
+
+    container.appendChild(clone);
+    bucketCount++;
+    document.getElementById('bucketCount').value = bucketCount;
+
+    reindexBuckets();
+
+    // Determine actual index of the newly added bucket from the DOM
+    const entries = document.querySelectorAll('#bucketsContainer .bucket-entry');
+    const newIndex = entries.length - 1;
+    const b = getBucketAt(newIndex);
+
+    // Set start date of new bucket to previous bucket's end date or today if first
+    if (newIndex === 0) {
+        b.start.value = formatDateToYYYYMMDD(new Date());
+    } else {
+        const prev = getBucketAt(newIndex - 1);
+        if (prev) b.start.value = prev.end.value || b.start.value;
+    }
+
+    // Attach listeners and compute
+    attachListeners(newIndex);
+    recalcBucket(newIndex);
+}
+
+function removeBucket(button) {
+    const bucketEntry = button.closest('.bucket-entry');
+    bucketEntry.remove();
+    bucketCount--;
+    document.getElementById('bucketCount').value = bucketCount;
+
+    reindexBuckets();
+
+    // Recompute chain from the removed position
+    recomputeFrom(0);
+}
+
+// Add first bucket if none exist
+// Initialize listeners, default dates, and compute cascading values
+
+document.addEventListener('DOMContentLoaded', function() {
+    const entries = document.querySelectorAll('#bucketsContainer .bucket-entry');
+    if (entries.length === 0) {
+        // Ensure we have a first bucket on create
+        addBucket();
+    }
+
+    // Attach listeners for all existing buckets
+    const allEntries = document.querySelectorAll('#bucketsContainer .bucket-entry');
+    allEntries.forEach((_, idx) => attachListeners(idx));
+
+    // Force Bucket #1 start to today in create mode and cascade
+    {% if is_create %}
+    const first = getBucketAt(0);
+    if (first) {
+        first.start.value = formatDateToYYYYMMDD(new Date());
+        recalcBucket(0);
+        recomputeFrom(1);
+    }
+    {% endif %}
+
+    // Ensure cascading starts and ends are consistent
+    recomputeFrom(0);
+
+    // Ensure first bucket start is today on submit (create mode)
+    {% if is_create %}
+    const form = document.getElementById('bucketForm');
+    if (form) {
+        form.addEventListener('submit', function() {
+            const firstOnSubmit = getBucketAt(0);
+            if (firstOnSubmit) {
+                firstOnSubmit.start.value = formatDateToYYYYMMDD(new Date());
+                recalcBucket(0);
+                recomputeFrom(1);
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

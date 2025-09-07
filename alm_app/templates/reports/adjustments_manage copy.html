@@ -1,0 +1,1720 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manage Adjustments - {{ fic_mis_date|date:"d-M-Y" }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .nav-bar {
+        background: linear-gradient(135deg, #4b4d4b 0%, #464746 100%);
+        color: white;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .nav-title {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    
+    .nav-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .nav-btn {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-btn:hover {
+        background: rgba(255,255,255,0.3);
+        border-color: rgba(255,255,255,0.5);
+    }
+    
+    .container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 0 20px;
+    }
+    
+    .page-header {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .page-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    
+    .page-subtitle {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .metadata {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .metadata-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+        color: #555;
+    }
+    
+    .metadata-value {
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .main-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    .section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+        font-size: 14px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+    
+    .form-group textarea {
+        height: 80px;
+        resize: vertical;
+    }
+    
+    .help-text {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+    
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background-color: #1e7e34;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+    
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #545b62;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    
+    .product-types-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .product-type-card {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .product-type-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+    }
+    
+    .product-type-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .product-type-header {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    
+    .product-type-info {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .product-type-currency {
+        display: inline-block;
+        background: #007bff;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        margin-right: 5px;
+    }
+    
+    .product-type-flow {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        margin-right: 5px;
+    }
+    
+    .flow-inflow {
+        background: #28a745;
+        color: white;
+    }
+    
+    .flow-outflow {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .adjustments-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    
+    .adjustments-table th,
+    .adjustments-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+        font-size: 12px;
+    }
+    
+    .adjustments-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+    
+    .adjustment-amount {
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        text-align: right;
+    }
+    
+    .adjustment-positive {
+        color: #28a745;
+    }
+    
+    .adjustment-negative {
+        color: #dc3545;
+    }
+    
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .loading::after {
+        content: "⏳ Processing...";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255,255,255,0.9);
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #333;
+    }
+    
+    .no-data {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+        padding: 20px;
+    }
+    
+    @media (max-width: 768px) {
+        .main-content {
+            grid-template-columns: 1fr;
+        }
+        
+        .product-types-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .metadata {
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nav-bar">
+    <div class="nav-title">🔧 Adjustments Management</div>
+    <div class="nav-actions">
+        <a href="{% url 'adjustments_form' %}" class="nav-btn">← Back to Form</a>
+        <a href="{% url 'contractual_gap_report' fic_mis_date=fic_mis_date process_name=process_name %}" class="nav-btn">📊 View Report</a>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Display Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="page-header">
+        <div class="page-title">Contractual Gap Adjustments</div>
+        <div class="page-subtitle">Date: {{ fic_mis_date|date:"d-M-Y" }}</div>
+        <div class="page-subtitle">Process: {{ process_name }}</div>
+        
+        <div class="metadata">
+            <div class="metadata-item">
+                <span>📅 Report Date:</span>
+                <span class="metadata-value">{{ fic_mis_date|date:"d-M-Y" }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>⚙️ Process:</span>
+                <span class="metadata-value">{{ process_name }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>🗂️ Table:</span>
+                <span class="metadata-value">{{ table_name }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>💱 Currencies:</span>
+                <span class="metadata-value">{{ available_currencies|length }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>📦 Product Types:</span>
+                <span class="metadata-value">{{ product_types|length }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>🔧 Existing Adjustments:</span>
+                <span class="metadata-value">{{ existing_adjustments|length }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <!-- Add New Adjustment Section -->
+        <div class="section">
+            <div class="section-title">
+                ➕ Add New Adjustment
+            </div>
+            
+            <form id="adjustmentForm">
+                <div class="form-group">
+                    <label for="currencyFilter">💱 Currency Filter</label>
+                    <select id="currencyFilter" name="currency_filter" required>
+                        <option value="">-- Select Currency --</option>
+                        {% for currency in available_currencies %}
+                            <option value="{{ currency }}">{{ currency }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="help-text">Select the currency for which you want to add adjustments</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="selectedProductType">📦 Select Product Type</label>
+                    <div class="product-types-grid" id="productTypesGrid">
+                        <!-- Product types will be loaded based on currency selection -->
+                    </div>
+                    <div class="help-text">Select a currency first, then click on a product type</div>
+                </div>
+                
+                <div class="form-group" id="productNameGroup" style="display: none;">
+                    <label for="productNameSelect">📄 Select Product Name</label>
+                    <select id="productNameSelect" name="product_name_select">
+                        <option value="">-- Select Product Name --</option>
+                    </select>
+                    <div class="help-text">Choose the specific product name to apply the adjustment to</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="adjustmentAmount">💰 Adjustment Amount</label>
+                    <input type="number" 
+                           id="adjustmentAmount" 
+                           name="adjustment_amount" 
+                           step="0.01" 
+                           placeholder="Enter adjustment amount (positive or negative)"
+                           required>
+                    <div class="help-text">Enter the adjustment amount. Use negative values for reductions.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="adjustmentDescription">📝 Description (Optional)</label>
+                    <textarea id="adjustmentDescription" 
+                              name="adjustment_description" 
+                              placeholder="Enter a description for this adjustment"></textarea>
+                    <div class="help-text">This description will be appended to the product name for tracking.</div>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">
+                        ➕ Add Adjustment
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                        🔄 Clear Form
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Existing Adjustments Section -->
+        <div class="section">
+            <div class="section-title">
+                📋 Existing Adjustments
+            </div>
+            
+            <div class="existing-adjustments">
+                {% if existing_adjustments %}
+                <table class="adjustments-table">
+                    <thead>
+                        <tr>
+                            <th>Product Type</th>
+                            <th>Product Name</th>
+                            <th>Currency</th>
+                            <th>Flow Type</th>
+                            <th>Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for adjustment in existing_adjustments %}
+                        <tr>
+                            <td>
+                                <strong>{{ adjustment.v_prod_type }}</strong>
+                                {% if adjustment.v_prod_type_desc %}
+                                <br><small>{{ adjustment.v_prod_type_desc }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ adjustment.v_product_name }}</strong>
+                            </td>
+                            <td>{{ adjustment.v_ccy_code }}</td>
+                            <td>
+                                <span class="product-type-flow flow-{{ adjustment.flow_type }}">
+                                    {{ adjustment.flow_type|upper }}
+                                </span>
+                            </td>
+                            <td class="adjustment-amount {% if adjustment.n_adjusted_cash_flow_amount > 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                {{ adjustment.n_adjusted_cash_flow_amount|floatformat:2 }}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" 
+                                        onclick="removeAdjustment('{{ adjustment.v_prod_type }}', '{{ adjustment.v_product_name }}', '{{ adjustment.v_ccy_code }}', '{{ adjustment.flow_type }}')">
+                                    🗑️ Remove
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-data">
+                    No adjustments have been made yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedProductType = null;
+    let selectedProductName = null;
+    let allProductTypes = {{ product_types|safe }};
+    
+    function loadProductTypesForCurrency(currency) {
+        const productTypesGrid = document.getElementById('productTypesGrid');
+        productTypesGrid.innerHTML = '';
+        
+        if (!currency) {
+            productTypesGrid.innerHTML = '<div class="no-data">Please select a currency first</div>';
+            return;
+        }
+        
+        // Filter product types by selected currency
+        const filteredTypes = allProductTypes.filter(type => type.v_ccy_code === currency);
+        
+        if (filteredTypes.length === 0) {
+            productTypesGrid.innerHTML = '<div class="no-data">No product types found for this currency</div>';
+            return;
+        }
+        
+        filteredTypes.forEach(productType => {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'product-type-card';
+            cardDiv.setAttribute('data-prod-type', productType.v_prod_type);
+            cardDiv.setAttribute('data-currency', productType.v_ccy_code);
+            cardDiv.setAttribute('data-flow-type', productType.flow_type);
+            cardDiv.setAttribute('data-description', productType.v_prod_type_desc || '');
+            cardDiv.onclick = () => selectProductType(cardDiv);
+            
+            cardDiv.innerHTML = `
+                <div class="product-type-header">${productType.v_prod_type}</div>
+                <div class="product-type-info">
+                    <span class="product-type-currency">${productType.v_ccy_code}</span>
+                    <span class="product-type-flow flow-${productType.flow_type}">${productType.flow_type.toUpperCase()}</span>
+                </div>
+                <div class="product-type-info">
+                    ${productType.v_prod_type_desc || 'No description'}
+                </div>
+                <div class="product-type-info">
+                    Records: ${productType.record_count}
+                </div>
+            `;
+            
+            productTypesGrid.appendChild(cardDiv);
+        });
+    }
+    
+    function selectProductType(element) {
+        // Remove previous selection
+        document.querySelectorAll('.product-type-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        // Add selection to clicked element
+        element.classList.add('selected');
+        
+        // Store selected product type data
+        selectedProductType = {
+            v_prod_type: element.dataset.prodType,
+            v_ccy_code: element.dataset.currency,
+            flow_type: element.dataset.flowType,
+            description: element.dataset.description
+        };
+        
+        // Load product names for this product type
+        loadProductNames();
+    }
+    
+    function loadProductNames() {
+        if (!selectedProductType) return;
+        
+        const productNameSelect = document.getElementById('productNameSelect');
+        const productNameGroup = document.getElementById('productNameGroup');
+        
+        // Show loading state
+        productNameSelect.innerHTML = '<option value="">Loading...</option>';
+        productNameGroup.style.display = 'block';
+        
+        // Make API call to get product names
+        const url = `/api/adjustments/{{ fic_mis_date|date:"Y-m-d" }}/{{ process_name }}/product-names/`;
+        const params = new URLSearchParams({
+            v_prod_type: selectedProductType.v_prod_type,
+            v_ccy_code: selectedProductType.v_ccy_code,
+            flow_type: selectedProductType.flow_type
+        });
+        
+        fetch(`${url}?${params}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                productNameSelect.innerHTML = '<option value="">-- Select Product Name --</option>';
+                
+                if (data.success && data.product_names) {
+                    data.product_names.forEach(product => {
+                        const option = document.createElement('option');
+                        option.value = product.v_product_name;
+                        option.textContent = product.v_product_name;
+                        
+                        // Add indication if already has adjustment
+                        if (product.n_adjusted_cash_flow_amount) {
+                            option.textContent += ` (Adj: ${product.n_adjusted_cash_flow_amount})`;
+                        }
+                        
+                        productNameSelect.appendChild(option);
+                    });
+                } else {
+                    productNameSelect.innerHTML = '<option value="">No product names found</option>';
+                    console.error('API response:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading product names:', error);
+                productNameSelect.innerHTML = '<option value="">Error loading product names</option>';
+                showAlert('Error loading product names: ' + error.message, 'error');
+            });
+    }
+    
+    // Currency filter change handler
+    document.getElementById('currencyFilter').addEventListener('change', function() {
+        const selectedCurrency = this.value;
+        loadProductTypesForCurrency(selectedCurrency);
+        
+        // Reset selections
+        selectedProductType = null;
+        selectedProductName = null;
+        document.getElementById('productNameGroup').style.display = 'none';
+    });
+    
+    // Product name selection handler
+    document.getElementById('productNameSelect').addEventListener('change', function() {
+        selectedProductName = this.value;
+    });
+    
+    function clearForm() {
+        document.getElementById('currencyFilter').value = '';
+        document.getElementById('adjustmentAmount').value = '';
+        document.getElementById('adjustmentDescription').value = '';
+        document.getElementById('productNameSelect').value = '';
+        document.getElementById('productNameGroup').style.display = 'none';
+        
+        // Clear selections
+        document.querySelectorAll('.product-type-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        selectedProductType = null;
+        selectedProductName = null;
+        
+        // Reload product types grid
+        loadProductTypesForCurrency('');
+    }
+    
+    function showLoading(element) {
+        element.classList.add('loading');
+    }
+    
+    function hideLoading(element) {
+        element.classList.remove('loading');
+    }
+    
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Remove alert after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+    
+    // Add adjustment form submission
+    document.getElementById('adjustmentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const currency = document.getElementById('currencyFilter').value;
+        const adjustmentAmount = document.getElementById('adjustmentAmount').value;
+        const adjustmentDescription = document.getElementById('adjustmentDescription').value;
+        
+        if (!currency) {
+            showAlert('Please select a currency first.', 'error');
+            return;
+        }
+        
+        if (!selectedProductType) {
+            showAlert('Please select a product type first.', 'error');
+            return;
+        }
+        
+        if (!selectedProductName) {
+            showAlert('Please select a product name first.', 'error');
+            return;
+        }
+        
+        if (!adjustmentAmount) {
+            showAlert('Please enter an adjustment amount.', 'error');
+            return;
+        }
+        
+        const formData = {
+            fic_mis_date: '{{ fic_mis_date|date:"Y-m-d" }}',
+            process_name: '{{ process_name }}',
+            v_prod_type: selectedProductType.v_prod_type,
+            v_product_name: selectedProductName,
+            v_ccy_code: selectedProductType.v_ccy_code,
+            flow_type: selectedProductType.flow_type,
+            adjustment_amount: parseFloat(adjustmentAmount),
+            adjustment_description: adjustmentDescription
+        };
+        
+        showLoading(document.querySelector('.section'));
+        
+        fetch('/adjustments/add/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading(document.querySelector('.section'));
+            
+            if (data.success) {
+                showAlert(data.message, 'success');
+                clearForm();
+                // Refresh the page to show updated adjustments
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showAlert(data.error || 'Error adding adjustment', 'error');
+            }
+        })
+        .catch(error => {
+            hideLoading(document.querySelector('.section'));
+            showAlert('Error adding adjustment: ' + error.message, 'error');
+        });
+    });
+    
+    // Remove adjustment function
+    function removeAdjustment(prodType, productName, currency, flowType) {
+        if (!confirm('Are you sure you want to remove this adjustment?')) {
+            return;
+        }
+        
+        const formData = {
+            fic_mis_date: '{{ fic_mis_date|date:"Y-m-d" }}',
+            process_name: '{{ process_name }}',
+            v_prod_type: prodType,
+            v_product_name: productName,
+            v_ccy_code: currency,
+            flow_type: flowType
+        };
+        
+        showLoading(document.querySelector('.section'));
+        
+        fetch('/adjustments/remove/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading(document.querySelector('.section'));
+            
+            if (data.success) {
+                showAlert(data.message, 'success');
+                // Refresh the page to show updated adjustments
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showAlert(data.error || 'Error removing adjustment', 'error');
+            }
+        })
+        .catch(error => {
+            hideLoading(document.querySelector('.section'));
+            showAlert('Error removing adjustment: ' + error.message, 'error');
+        });
+    }
+    
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load empty state initially
+        loadProductTypesForCurrency('');
+    });
+</script>
+{% endblock %} 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Adjustments - {{ fic_mis_date|date:"d-M-Y" }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .nav-bar {
+            background: linear-gradient(135deg, #4b4d4b 0%, #464746 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .nav-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .nav-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .page-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .metadata {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .metadata-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .form-group textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #1e7e34;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        
+        .alert-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .alert-info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        
+        .product-types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .product-type-card {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .product-type-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+        }
+        
+        .product-type-card.selected {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        
+        .product-type-header {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .product-type-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .product-type-currency {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            margin-right: 5px;
+        }
+        
+        .product-type-flow {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            margin-right: 5px;
+        }
+        
+        .flow-inflow {
+            background: #28a745;
+            color: white;
+        }
+        
+        .flow-outflow {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .existing-adjustments {
+            margin-top: 20px;
+        }
+        
+        .adjustments-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .adjustments-table th,
+        .adjustments-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+        
+        .adjustments-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .adjustment-amount {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-align: right;
+        }
+        
+        .adjustment-positive {
+            color: #28a745;
+        }
+        
+        .adjustment-negative {
+            color: #dc3545;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .loading::after {
+            content: "⏳ Processing...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.9);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .product-types-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metadata {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <div class="nav-title">🔧 Adjustments Management</div>
+        <div class="nav-actions">
+            <a href="{% url 'adjustments_form' %}" class="nav-btn">← Back to Form</a>
+            <a href="{% url 'contractual_gap_report' fic_mis_date=fic_mis_date process_name=process_name %}" class="nav-btn">📊 View Report</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Display Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <div class="page-header">
+            <div class="page-title">Contractual Gap Adjustments</div>
+            <div class="page-subtitle">Date: {{ fic_mis_date|date:"d-M-Y" }}</div>
+            <div class="page-subtitle">Process: {{ process_name }}</div>
+            
+            <div class="metadata">
+                <div class="metadata-item">
+                    <span>📅 Report Date:</span>
+                    <span class="metadata-value">{{ fic_mis_date|date:"d-M-Y" }}</span>
+                </div>
+                <div class="metadata-item">
+                    <span>⚙️ Process:</span>
+                    <span class="metadata-value">{{ process_name }}</span>
+                </div>
+                <div class="metadata-item">
+                    <span>🗂️ Table:</span>
+                    <span class="metadata-value">{{ table_name }}</span>
+                </div>
+                <div class="metadata-item">
+                    <span>💱 Currencies:</span>
+                    <span class="metadata-value">{{ available_currencies|length }}</span>
+                </div>
+                <div class="metadata-item">
+                    <span>📦 Product Types:</span>
+                    <span class="metadata-value">{{ product_types|length }}</span>
+                </div>
+                <div class="metadata-item">
+                    <span>🔧 Existing Adjustments:</span>
+                    <span class="metadata-value">{{ existing_adjustments|length }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Add New Adjustment Section -->
+            <div class="section">
+                <div class="section-title">
+                    ➕ Add New Adjustment
+                </div>
+                
+                <form id="adjustmentForm">
+                    <div class="form-group">
+                        <label for="currencyFilter">💱 Currency Filter</label>
+                        <select id="currencyFilter" name="currency_filter" required>
+                            <option value="">-- Select Currency --</option>
+                            {% for currency in available_currencies %}
+                                <option value="{{ currency }}">{{ currency }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="help-text">Select the currency for which you want to add adjustments</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="selectedProductType">📦 Select Product Type</label>
+                        <div class="product-types-grid" id="productTypesGrid">
+                            <!-- Product types will be loaded based on currency selection -->
+                        </div>
+                        <div class="help-text">Select a currency first, then click on a product type</div>
+                    </div>
+                    
+                    <div class="form-group" id="productNameGroup" style="display: none;">
+                        <label for="productNameSelect">📄 Select Product Name</label>
+                        <select id="productNameSelect" name="product_name_select">
+                            <option value="">-- Select Product Name --</option>
+                        </select>
+                        <div class="help-text">Choose the specific product name to apply the adjustment to</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="adjustmentAmount">💰 Adjustment Amount</label>
+                        <input type="number" 
+                               id="adjustmentAmount" 
+                               name="adjustment_amount" 
+                               step="0.01" 
+                               placeholder="Enter adjustment amount (positive or negative)"
+                               required>
+                        <div class="help-text">Enter the adjustment amount. Use negative values for reductions.</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="adjustmentDescription">📝 Description (Optional)</label>
+                        <textarea id="adjustmentDescription" 
+                                  name="adjustment_description" 
+                                  placeholder="Enter a description for this adjustment"></textarea>
+                        <div class="help-text">This description will be appended to the product name for tracking.</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">
+                            ➕ Add Adjustment
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                            🔄 Clear Form
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Existing Adjustments Section -->
+            <div class="section">
+                <div class="section-title">
+                    📋 Existing Adjustments
+                </div>
+                
+                <div class="existing-adjustments">
+                    {% if existing_adjustments %}
+                    <table class="adjustments-table">
+                        <thead>
+                            <tr>
+                                <th>Product Type</th>
+                                <th>Product Name</th>
+                                <th>Currency</th>
+                                <th>Flow Type</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for adjustment in existing_adjustments %}
+                            <tr>
+                                <td>
+                                    <strong>{{ adjustment.v_prod_type }}</strong>
+                                    {% if adjustment.v_prod_type_desc %}
+                                    <br><small>{{ adjustment.v_prod_type_desc }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ adjustment.v_product_name }}</strong>
+                                </td>
+                                <td>{{ adjustment.v_ccy_code }}</td>
+                                <td>
+                                    <span class="product-type-flow flow-{{ adjustment.flow_type }}">
+                                        {{ adjustment.flow_type|upper }}
+                                    </span>
+                                </td>
+                                <td class="adjustment-amount {% if adjustment.n_adjusted_cash_flow_amount > 0 %}adjustment-positive{% else %}adjustment-negative{% endif %}">
+                                    {{ adjustment.n_adjusted_cash_flow_amount|floatformat:2 }}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" 
+                                            onclick="removeAdjustment('{{ adjustment.v_prod_type }}', '{{ adjustment.v_product_name }}', '{{ adjustment.v_ccy_code }}', '{{ adjustment.flow_type }}')">
+                                        🗑️ Remove
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="no-data">
+                        No adjustments have been made yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let selectedProductType = null;
+        let selectedProductName = null;
+        let allProductTypes = {{ product_types|safe }};
+        
+        function loadProductTypesForCurrency(currency) {
+            const productTypesGrid = document.getElementById('productTypesGrid');
+            productTypesGrid.innerHTML = '';
+            
+            if (!currency) {
+                productTypesGrid.innerHTML = '<div class="no-data">Please select a currency first</div>';
+                return;
+            }
+            
+            // Filter product types by selected currency
+            const filteredTypes = allProductTypes.filter(type => type.v_ccy_code === currency);
+            
+            if (filteredTypes.length === 0) {
+                productTypesGrid.innerHTML = '<div class="no-data">No product types found for this currency</div>';
+                return;
+            }
+            
+            filteredTypes.forEach(productType => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'product-type-card';
+                cardDiv.setAttribute('data-prod-type', productType.v_prod_type);
+                cardDiv.setAttribute('data-currency', productType.v_ccy_code);
+                cardDiv.setAttribute('data-flow-type', productType.flow_type);
+                cardDiv.setAttribute('data-description', productType.v_prod_type_desc || '');
+                cardDiv.onclick = () => selectProductType(cardDiv);
+                
+                cardDiv.innerHTML = `
+                    <div class="product-type-header">${productType.v_prod_type}</div>
+                    <div class="product-type-info">
+                        <span class="product-type-currency">${productType.v_ccy_code}</span>
+                        <span class="product-type-flow flow-${productType.flow_type}">${productType.flow_type.toUpperCase()}</span>
+                    </div>
+                    <div class="product-type-info">
+                        ${productType.v_prod_type_desc || 'No description'}
+                    </div>
+                    <div class="product-type-info">
+                        Records: ${productType.record_count}
+                    </div>
+                `;
+                
+                productTypesGrid.appendChild(cardDiv);
+            });
+        }
+        
+        function selectProductType(element) {
+            // Remove previous selection
+            document.querySelectorAll('.product-type-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Add selection to clicked element
+            element.classList.add('selected');
+            
+            // Store selected product type data
+            selectedProductType = {
+                v_prod_type: element.dataset.prodType,
+                v_ccy_code: element.dataset.currency,
+                flow_type: element.dataset.flowType,
+                description: element.dataset.description
+            };
+            
+            // Load product names for this product type
+            loadProductNames();
+        }
+        
+        function loadProductNames() {
+            if (!selectedProductType) return;
+            
+            const productNameSelect = document.getElementById('productNameSelect');
+            const productNameGroup = document.getElementById('productNameGroup');
+            
+            // Show loading state
+            productNameSelect.innerHTML = '<option value="">Loading...</option>';
+            productNameGroup.style.display = 'block';
+            
+            // Make API call to get product names
+            const url = `/api/adjustments/{{ fic_mis_date|date:"Y-m-d" }}/{{ process_name }}/product-names/`;
+            const params = new URLSearchParams({
+                v_prod_type: selectedProductType.v_prod_type,
+                v_ccy_code: selectedProductType.v_ccy_code,
+                flow_type: selectedProductType.flow_type
+            });
+            
+            fetch(`${url}?${params}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    productNameSelect.innerHTML = '<option value="">-- Select Product Name --</option>';
+                    
+                    if (data.success && data.product_names) {
+                        data.product_names.forEach(product => {
+                            const option = document.createElement('option');
+                            option.value = product.v_product_name;
+                            option.textContent = product.v_product_name;
+                            
+                            // Add indication if already has adjustment
+                            if (product.n_adjusted_cash_flow_amount) {
+                                option.textContent += ` (Adj: ${product.n_adjusted_cash_flow_amount})`;
+                            }
+                            
+                            productNameSelect.appendChild(option);
+                        });
+                    } else {
+                        productNameSelect.innerHTML = '<option value="">No product names found</option>';
+                        console.error('API response:', data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading product names:', error);
+                    productNameSelect.innerHTML = '<option value="">Error loading product names</option>';
+                    showAlert('Error loading product names: ' + error.message, 'error');
+                });
+        }
+        
+        // Currency filter change handler
+        document.getElementById('currencyFilter').addEventListener('change', function() {
+            const selectedCurrency = this.value;
+            loadProductTypesForCurrency(selectedCurrency);
+            
+            // Reset selections
+            selectedProductType = null;
+            selectedProductName = null;
+            document.getElementById('productNameGroup').style.display = 'none';
+        });
+        
+        // Product name selection handler
+        document.getElementById('productNameSelect').addEventListener('change', function() {
+            selectedProductName = this.value;
+        });
+        
+        function clearForm() {
+            document.getElementById('currencyFilter').value = '';
+            document.getElementById('adjustmentAmount').value = '';
+            document.getElementById('adjustmentDescription').value = '';
+            document.getElementById('productNameSelect').value = '';
+            document.getElementById('productNameGroup').style.display = 'none';
+            
+            // Clear selections
+            document.querySelectorAll('.product-type-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            selectedProductType = null;
+            selectedProductName = null;
+            
+            // Reload product types grid
+            loadProductTypesForCurrency('');
+        }
+        
+        function showLoading(element) {
+            element.classList.add('loading');
+        }
+        
+        function hideLoading(element) {
+            element.classList.remove('loading');
+        }
+        
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Remove alert after 5 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+        
+        // Add adjustment form submission
+        document.getElementById('adjustmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const currency = document.getElementById('currencyFilter').value;
+            const adjustmentAmount = document.getElementById('adjustmentAmount').value;
+            const adjustmentDescription = document.getElementById('adjustmentDescription').value;
+            
+            if (!currency) {
+                showAlert('Please select a currency first.', 'error');
+                return;
+            }
+            
+            if (!selectedProductType) {
+                showAlert('Please select a product type first.', 'error');
+                return;
+            }
+            
+            if (!selectedProductName) {
+                showAlert('Please select a product name first.', 'error');
+                return;
+            }
+            
+            if (!adjustmentAmount) {
+                showAlert('Please enter an adjustment amount.', 'error');
+                return;
+            }
+            
+            const formData = {
+                fic_mis_date: '{{ fic_mis_date|date:"Y-m-d" }}',
+                process_name: '{{ process_name }}',
+                v_prod_type: selectedProductType.v_prod_type,
+                v_product_name: selectedProductName,
+                v_ccy_code: selectedProductType.v_ccy_code,
+                flow_type: selectedProductType.flow_type,
+                adjustment_amount: parseFloat(adjustmentAmount),
+                adjustment_description: adjustmentDescription
+            };
+            
+            showLoading(document.querySelector('.section'));
+            
+            fetch('/adjustments/add/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading(document.querySelector('.section'));
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    clearForm();
+                    // Refresh the page to show updated adjustments
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showAlert(data.error || 'Error adding adjustment', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading(document.querySelector('.section'));
+                showAlert('Error adding adjustment: ' + error.message, 'error');
+            });
+        });
+        
+        // Remove adjustment function
+        function removeAdjustment(prodType, productName, currency, flowType) {
+            if (!confirm('Are you sure you want to remove this adjustment?')) {
+                return;
+            }
+            
+            const formData = {
+                fic_mis_date: '{{ fic_mis_date|date:"Y-m-d" }}',
+                process_name: '{{ process_name }}',
+                v_prod_type: prodType,
+                v_product_name: productName,
+                v_ccy_code: currency,
+                flow_type: flowType
+            };
+            
+            showLoading(document.querySelector('.section'));
+            
+            fetch('/adjustments/remove/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading(document.querySelector('.section'));
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    // Refresh the page to show updated adjustments
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showAlert(data.error || 'Error removing adjustment', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading(document.querySelector('.section'));
+                showAlert('Error removing adjustment: ' + error.message, 'error');
+            });
+        }
+        
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load empty state initially
+            loadProductTypesForCurrency('');
+        });
+    </script>
+</body>
+</html> 

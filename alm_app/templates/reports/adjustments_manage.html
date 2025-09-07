@@ -1,0 +1,610 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Adjustments - {{ fic_mis_date|date:"d-M-Y" }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Display Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h1 class="card-title h3 mb-3">🔧 Contractual Gap Adjustments</h1>
+            <p class="card-text text-muted mb-2">Date: {{ fic_mis_date|date:"d-M-Y" }}</p>
+            <p class="card-text text-muted mb-3">Process: {{ process_name }}</p>
+            
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">📅 Report Date:</span>
+                        <strong>{{ fic_mis_date|date:"d-M-Y" }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">⚙️ Process:</span>
+                        <strong>{{ process_name }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">🗂️ Table:</span>
+                        <strong>{{ table_name }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">💱 Currencies:</span>
+                        <strong>{{ available_currencies|length }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">📦 Product Types:</span>
+                        <strong>{{ product_types|length }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">🔧 Existing Adjustments:</span>
+                        <strong>{{ existing_adjustments|length }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Add New Adjustment Section -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">➕ Add New Adjustment</h5>
+                </div>
+                <div class="card-body">
+                    <form id="adjustmentForm">
+                        <div class="mb-3">
+                            <label for="currencyFilter" class="form-label">💱 Currency Filter</label>
+                            <select id="currencyFilter" name="currency_filter" class="form-select" required>
+                                <option value="">-- Select Currency --</option>
+                                {% for currency in available_currencies %}
+                                    <option value="{{ currency }}">{{ currency }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select the currency for which you want to add adjustments</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">📦 Select Product Type</label>
+                            <div id="productTypesGrid" class="row g-2">
+                                <!-- Product types will be loaded based on currency selection -->
+                            </div>
+                            <div class="form-text">Select a currency first, then click on a product type</div>
+                        </div>
+                        
+                        <div class="mb-3" id="productNameGroup" style="display: none;">
+                            <label for="productNameSelect" class="form-label">📄 Select Product Name</label>
+                            <select id="productNameSelect" name="product_name_select" class="form-select">
+                                <option value="">-- Select Product Name --</option>
+                            </select>
+                            <div class="form-text">Choose the specific product name to apply the adjustment to</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="adjustmentAmount" class="form-label">💰 Adjustment Amount</label>
+                            <input type="number" 
+                                   id="adjustmentAmount" 
+                                   name="adjustment_amount" 
+                                   class="form-control"
+                                   step="0.01" 
+                                   placeholder="Enter adjustment amount (positive or negative)"
+                                   required>
+                            <div class="form-text">Enter the adjustment amount. Use negative values for reductions.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="adjustmentDescription" class="form-label">📝 Description (Optional)</label>
+                            <textarea id="adjustmentDescription" 
+                                      name="adjustment_description" 
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Enter a description for this adjustment"></textarea>
+                            <div class="form-text">This description will be appended to the product name for tracking.</div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                ➕ Add Adjustment
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                                🔄 Clear Form
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Existing Adjustments Section -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">📋 Existing Adjustments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="existing-adjustments">
+                        {% if existing_adjustments %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Product Type</th>
+                                        <th>Product Name</th>
+                                        <th>Currency</th>
+                                        <th>Flow Type</th>
+                                        <th>Amount</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for adjustment in existing_adjustments %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ adjustment.v_prod_type }}</strong>
+                                            {% if adjustment.v_prod_type_desc %}
+                                            <br><small class="text-muted">{{ adjustment.v_prod_type_desc }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ adjustment.v_product_name }}</strong>
+                                        </td>
+                                        <td>{{ adjustment.v_ccy_code }}</td>
+                                        <td>
+                                            <span class="badge {% if adjustment.flow_type == 'inflow' %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ adjustment.flow_type|upper }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end font-monospace fw-bold {% if adjustment.n_adjusted_cash_flow_amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                                            {{ adjustment.n_adjusted_cash_flow_amount|floatformat:2 }}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="removeAdjustment('{{ adjustment.v_prod_type }}', '{{ adjustment.v_product_name }}', '{{ adjustment.v_ccy_code }}', '{{ adjustment.flow_type }}')">
+                                                🗑️ Remove
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <p class="mb-0">No adjustments have been made yet.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .product-type-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: white;
+    }
+    
+    .product-type-card:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.15);
+        transform: translateY(-1px);
+    }
+    
+    .product-type-card.selected {
+        border-color: #0d6efd;
+        background-color: #f8f9fa;
+        box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .product-type-header {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .product-type-info {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+    
+    .product-type-currency {
+        display: inline-block;
+        background: #0d6efd;
+        color: white;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        font-size: 0.625rem;
+        margin-right: 0.25rem;
+    }
+    
+    .product-type-flow {
+        display: inline-block;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        font-size: 0.625rem;
+        margin-right: 0.25rem;
+    }
+    
+    .flow-inflow {
+        background: #198754;
+        color: white;
+    }
+    
+    .flow-outflow {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+        position: relative;
+    }
+    
+    .loading::after {
+        content: "⏳ Processing...";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255,255,255,0.95);
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        color: #333;
+        box-shadow: 0 0.125rem 0.5rem rgba(0,0,0,0.15);
+        z-index: 10;
+    }
+</style>
+
+<script>
+    let selectedProductType = null;
+    let selectedProductName = null;
+    let allProductTypes = {{ product_types|safe }};
+    
+    function loadProductTypesForCurrency(currency) {
+        const productTypesGrid = document.getElementById('productTypesGrid');
+        productTypesGrid.innerHTML = '';
+        
+        if (!currency) {
+            productTypesGrid.innerHTML = '<div class="col-12"><div class="text-center text-muted py-3">Please select a currency first</div></div>';
+            return;
+        }
+        
+        // Filter product types by selected currency
+        const filteredTypes = allProductTypes.filter(type => type.v_ccy_code === currency);
+        
+        if (filteredTypes.length === 0) {
+            productTypesGrid.innerHTML = '<div class="col-12"><div class="text-center text-muted py-3">No product types found for this currency</div></div>';
+            return;
+        }
+        
+        filteredTypes.forEach(productType => {
+            const colDiv = document.createElement('div');
+            colDiv.className = 'col-md-6';
+            
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'product-type-card';
+            cardDiv.setAttribute('data-prod-type', productType.v_prod_type);
+            cardDiv.setAttribute('data-currency', productType.v_ccy_code);
+            cardDiv.setAttribute('data-flow-type', productType.flow_type);
+            cardDiv.setAttribute('data-description', productType.v_prod_type_desc || '');
+            cardDiv.onclick = () => selectProductType(cardDiv);
+            
+            cardDiv.innerHTML = `
+                <div class="product-type-header">${productType.v_prod_type}</div>
+                <div class="product-type-info">
+                    <span class="product-type-currency">${productType.v_ccy_code}</span>
+                    <span class="product-type-flow flow-${productType.flow_type}">${productType.flow_type.toUpperCase()}</span>
+                </div>
+                <div class="product-type-info">
+                    ${productType.v_prod_type_desc || 'No description'}
+                </div>
+                <div class="product-type-info">
+                    Records: ${productType.record_count}
+                </div>
+            `;
+            
+            colDiv.appendChild(cardDiv);
+            productTypesGrid.appendChild(colDiv);
+        });
+    }
+    
+    function selectProductType(element) {
+        // Remove previous selection
+        document.querySelectorAll('.product-type-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        // Add selection to clicked element
+        element.classList.add('selected');
+        
+        // Store selected product type data
+        selectedProductType = {
+            v_prod_type: element.dataset.prodType,
+            v_ccy_code: element.dataset.currency,
+            flow_type: element.dataset.flowType,
+            description: element.dataset.description
+        };
+        
+        // Load product names for this product type
+        loadProductNames();
+    }
+    
+    function loadProductNames() {
+        if (!selectedProductType) return;
+        
+        const productNameSelect = document.getElementById('productNameSelect');
+        const productNameGroup = document.getElementById('productNameGroup');
+        
+        // Show loading state
+        productNameSelect.innerHTML = '<option value="">Loading...</option>';
+        productNameGroup.style.display = 'block';
+        
+        // Make API call to get product names
+        const url = `/api/adjustments/{{ fic_mis_date|date:"Y-m-d" }}/{{ process_name }}/product-names/`;
+        const params = new URLSearchParams({
+            v_prod_type: selectedProductType.v_prod_type,
+            v_ccy_code: selectedProductType.v_ccy_code,
+            flow_type: selectedProductType.flow_type
+        });
+        
+        fetch(`${url}?${params}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                productNameSelect.innerHTML = '<option value="">-- Select Product Name --</option>';
+                
+                if (data.success && data.product_names) {
+                    data.product_names.forEach(product => {
+                        const option = document.createElement('option');
+                        option.value = product.v_product_name;
+                        option.textContent = product.v_product_name;
+                        
+                        // Add indication if already has adjustment
+                        if (product.n_adjusted_cash_flow_amount) {
+                            option.textContent += ` (Adj: ${product.n_adjusted_cash_flow_amount})`;
+                        }
+                        
+                        productNameSelect.appendChild(option);
+                    });
+                } else {
+                    productNameSelect.innerHTML = '<option value="">No product names found</option>';
+                    console.error('API response:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading product names:', error);
+                productNameSelect.innerHTML = '<option value="">Error loading product names</option>';
+                showAlert('Error loading product names: ' + error.message, 'error');
+            });
+    }
+    
+    // Currency filter change handler
+    document.getElementById('currencyFilter').addEventListener('change', function() {
+        const selectedCurrency = this.value;
+        loadProductTypesForCurrency(selectedCurrency);
+        
+        // Reset selections
+        selectedProductType = null;
+        selectedProductName = null;
+        document.getElementById('productNameGroup').style.display = 'none';
+    });
+    
+    // Product name selection handler
+    document.getElementById('productNameSelect').addEventListener('change', function() {
+        selectedProductName = this.value;
+    });
+    
+    function clearForm() {
+        document.getElementById('currencyFilter').value = '';
+        document.getElementById('adjustmentAmount').value = '';
+        document.getElementById('adjustmentDescription').value = '';
+        document.getElementById('productNameSelect').value = '';
+        document.getElementById('productNameGroup').style.display = 'none';
+        
+        // Clear selections
+        document.querySelectorAll('.product-type-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        selectedProductType = null;
+        selectedProductName = null;
+        
+        // Reload product types grid
+        loadProductTypesForCurrency('');
+    }
+    
+    function showLoading(element) {
+        element.classList.add('loading');
+    }
+    
+    function hideLoading(element) {
+        element.classList.remove('loading');
+    }
+    
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Remove alert after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+    
+    // Add adjustment form submission
+    document.getElementById('adjustmentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const currency = document.getElementById('currencyFilter').value;
+        const adjustmentAmount = document.getElementById('adjustmentAmount').value;
+        const adjustmentDescription = document.getElementById('adjustmentDescription').value;
+        
+        if (!currency) {
+            showAlert('Please select a currency first.', 'error');
+            return;
+        }
+        
+        if (!selectedProductType) {
+            showAlert('Please select a product type first.', 'error');
+            return;
+        }
+        
+        if (!selectedProductName) {
+            showAlert('Please select a product name first.', 'error');
+            return;
+        }
+        
+        if (!adjustmentAmount) {
+            showAlert('Please enter an adjustment amount.', 'error');
+            return;
+        }
+        
+        const formData = {
+            fic_mis_date: '{{ fic_mis_date|date:"Y-m-d" }}',
+            process_name: '{{ process_name }}',
+            v_prod_type: selectedProductType.v_prod_type,
+            v_product_name: selectedProductName,
+            v_ccy_code: selectedProductType.v_ccy_code,
+            flow_type: selectedProductType.flow_type,
+            adjustment_amount: parseFloat(adjustmentAmount),
+            adjustment_description: adjustmentDescription
+        };
+        
+        showLoading(document.querySelector('.section'));
+        
+        fetch('/adjustments/add/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading(document.querySelector('.section'));
+            
+            if (data.success) {
+                showAlert(data.message, 'success');
+                clearForm();
+                // Refresh the page to show updated adjustments
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showAlert(data.error || 'Error adding adjustment', 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            hideLoading(document.querySelector('.section'));
+            showAlert('Error adding adjustment: ' + error.message, 'error');
+        });
+    });
+    
+    // Remove adjustment function
+    function removeAdjustment(prodType, productName, currency, flowType) {
+        if (!confirm('Are you sure you want to remove this adjustment?')) {
+            return;
+        }
+        
+        const formData = {
+            fic_mis_date: '{{ fic_mis_date|date:"Y-m-d" }}',
+            process_name: '{{ process_name }}',
+            v_prod_type: prodType,
+            v_product_name: productName,
+            v_ccy_code: currency,
+            flow_type: flowType
+        };
+        
+        showLoading(document.querySelector('.section'));
+        
+        fetch('/adjustments/remove/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading(document.querySelector('.section'));
+            
+            if (data.success) {
+                showAlert(data.message, 'success');
+                // Refresh the page to show updated adjustments
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showAlert(data.error || 'Error removing adjustment', 'error');
+            }
+        })
+        .catch(error => {
+            hideLoading(document.querySelector('.section'));
+            showAlert('Error removing adjustment: ' + error.message, 'error');
+        });
+    }
+    
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load empty state initially
+        loadProductTypesForCurrency('');
+    });
+    </script>
+</body>
+</html>

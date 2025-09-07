@@ -1,0 +1,248 @@
+{% extends "base/base.html" %}
+{% load tailwind_tags %}
+
+{% block content %}
+<!-- Full-bleed wrapper: minimal horizontal padding; eat any leftover gutter -->
+<div class="text-[15px] container px-1 lg:px-2 lg:-ml-2 lg:-mr-2">
+
+  <!-- heading -->
+  <div class="mb-4 flex items-center justify-between">
+    <h1 class="text-base font-semibold">Dashboard</h1>
+    <a href="{% url 'LCR:lcr_run' %}"
+       class="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition">
+      <!-- play icon -->
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      Run LRM
+    </a>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-[13px] text-gray-500">Latest Reporting Date</span>
+        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7V3m8 4V3M4 11h16M5 21h14a2 2 0 002-2V7a2 2 0
+                  00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <div class="mt-2 text-lg font-semibold">
+        {% if latest_date %}{{ latest_date|date:"F j, Y" }}{% else %}—{% endif %}
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-[13px] text-gray-500">Total Upload Rows</span>
+        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0
+                   2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8
+                   1.79 8 4"/>
+        </svg>
+      </div>
+      <div class="mt-2 text-lg font-semibold">
+        {{ totals.hqla|default:0|add:totals.inflows|add:totals.outflows|add:totals.asf|add:totals.rsf }}
+      </div>
+      <div class="mt-1 text-[13px] text-gray-500">
+        HQLA {{ totals.hqla|default:0 }}, Inflows {{ totals.inflows|default:0 }},
+        Outflows {{ totals.outflows|default:0 }}, ASF {{ totals.asf|default:0 }}, RSF {{ totals.rsf|default:0 }}
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-[13px] text-gray-500">Recent Run Success Rate</span>
+        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0
+                   00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm5
+                   0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6
+                   0h6"/>
+        </svg>
+      </div>
+      <div class="mt-2 text-lg font-semibold">
+        {% if success_rate is not None %}{{ success_rate }}%{% else %}—{% endif %}
+      </div>
+      <div class="mt-1 text-[13px] text-gray-500">Last 10 runs</div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <span class="text-[13px] text-gray-500">Last Run</span>
+        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0
+                   11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <div class="mt-2 text-[13px]">
+        {% if last_run %}
+          <div class="font-semibold">{{ last_run.run_name }}</div>
+          <div class="text-gray-500">{{ last_run.created_at|date:"Y-m-d H:i" }}</div>
+          <div class="mt-1">
+            {% with s=last_run.status|default:"" %}
+              {% if s|lower == "success" %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Success</span>
+              {% elif s|lower == "failed" or s|lower == "failure" %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Failed</span>
+              {% elif s|lower == "running" or s|lower == "in progress" %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Running</span>
+              {% elif s %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">{{ last_run.status }}</span>
+              {% else %}
+                <span class="text-xs text-gray-500">—</span>
+              {% endif %}
+            {% endwith %}
+          </div>
+        {% else %} — {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Data completeness + Recent runs -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
+    <div class="bg-white border border-gray-200 rounded-lg">
+      <div class="px-3 py-2.5 border-b border-gray-200 flex items-center justify-between">
+        <div class="font-semibold">Data Completeness</div>
+        {% if completeness and completeness.ok %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Complete</span>
+        {% elif completeness %}
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Incomplete</span>
+        {% else %}
+          <span class="text-[13px] text-gray-500">No uploads yet</span>
+        {% endif %}
+      </div>
+
+      <div class="p-3">
+        {% if completeness %}
+          <div class="text-[13px] text-gray-600 mb-2">Reporting Date:
+            <span class="font-medium text-gray-800">{{ completeness.date|date:"F j, Y" }}</span>
+          </div>
+          <ul class="space-y-2 text-[13px]">
+            {% for label, ok in completeness.checks.items %}
+              <li class="flex items-center justify-between">
+                <span>{{ label }}</span>
+                {% if ok %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Present</span>
+                {% else %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Missing</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+
+          {% if completeness.missing %}
+            <div class="mt-3 flex flex-wrap gap-2">
+              {% for m in completeness.missing %}
+                {% if m == "HQLA" %}
+                  <a href="{% url 'LCR:upload_hqla' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload HQLA</a>
+                {% elif m == "Inflows" %}
+                  <a href="{% url 'LCR:upload_cash_inflow' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload Inflows</a>
+                {% elif m == "Outflows" %}
+                  <a href="{% url 'LCR:upload_cash_outflow' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload Outflows</a>
+                {% elif m == "ASF" %}
+                  <a href="{% url 'LCR:upload_asf' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload ASF</a>
+                {% elif m == "RSF" %}
+                  <a href="{% url 'LCR:upload_rsf' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload RSF</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% else %}
+          <p class="text-[13px] text-gray-600">Start by uploading HQLA, Inflows, Outflows, ASF, and RSF data.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <a href="{% url 'LCR:upload_hqla' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload HQLA</a>
+            <a href="{% url 'LCR:upload_cash_inflow' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload Inflows</a>
+            <a href="{% url 'LCR:upload_cash_outflow' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload Outflows</a>
+            <a href="{% url 'LCR:upload_asf' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload ASF</a>
+            <a href="{% url 'LCR:upload_rsf' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">Upload RSF</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent runs table -->
+    <div class="bg-white border border-gray-200 rounded-lg">
+      <div class="px-3 py-2.5 border-b border-gray-200 flex items-center justify-between">
+        <div class="font-semibold">Recent Runs</div>
+        <a href="{% url 'LCR:previous_runs' %}" class="text-[13px] text-indigo-600 hover:underline">View all</a>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-[13px] border-collapse">
+          <thead>
+            <tr class="bg-[#171426] text-white">
+              <th class="px-3 py-2 border border-gray-300 text-left">Run</th>
+              <th class="px-3 py-2 border border-gray-300 text-left">Date</th>
+              <th class="px-3 py-2 border border-gray-300 text-left">Created</th>
+              <th class="px-3 py-2 border border-gray-300 text-left">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if recent_runs %}
+              {% for r in recent_runs %}
+              <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 border border-gray-300">
+                  <a class="text-indigo-600 hover:underline"
+                     href="{% url 'LCR:lcr_run' %}?reporting_date={{ r.reporting_date|date:'Y-m-d' }}">
+                    {{ r.run_name }}
+                  </a>
+                </td>
+                <td class="px-3 py-2 border border-gray-300">{{ r.reporting_date|date:"F j, Y" }}</td>
+                <td class="px-3 py-2 border border-gray-300">{{ r.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-3 py-2 border border-gray-300">
+                  {% with s=r.status|default:"" %}
+                    {% if s|lower == "success" %}
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Success</span>
+                    {% elif s|lower == "failed" or s|lower == "failure" %}
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Failed</span>
+                    {% elif s|lower == "running" or s|lower == "in progress" %}
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Running</span>
+                    {% elif s %}
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">{{ r.status }}</span>
+                    {% else %}
+                      <span class="text-xs text-gray-500">—</span>
+                    {% endif %}
+                  {% endwith %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="4" class="px-3 py-4 border border-gray-300 text-center text-gray-500">No runs yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="bg-white border border-gray-200 rounded-lg p-3">
+    <div class="font-semibold mb-2">Quick Actions</div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'LCR:lcr_records' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">
+        LCR Report
+      </a>
+      <a href="{% url 'LCR:nsfr_records' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">
+        NSFR Report
+      </a>
+      <a href="{% url 'LCR:upload_hqla' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">
+        Upload HQLA
+      </a>
+      <a href="{% url 'LCR:configs' %}" class="px-3 py-1.5 rounded bg-[#171426] text-white hover:bg-[#695404] transition text-[13px]">
+        Configurations
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

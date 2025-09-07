@@ -1,0 +1,280 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Capesso LRM{% endblock %}</title>
+
+  {% tailwind_css %}
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    window.currentUrlName = "{{ request.resolver_match.url_name }}";
+  </script>
+</head>
+
+<body class="font-[Inter,ui-sans-serif,system-ui] bg-white text-gray-900">
+  <!-- Header (brand flush with sidebar; user at far right) -->
+  <header class="fixed inset-x-0 top-0 z-40 h-16 bg-white shadow">
+    <div class="h-full w-full flex items-center justify-between px-2 lg:px-4">
+      <div class="flex items-center">
+        <button id="sidebar-toggle"
+          class="inline-flex lg:hidden items-center justify-center p-2 rounded-md text-gray-600 hover:bg-orange-50 hover:text-orange-600 transition"
+          aria-label="Toggle Sidebar">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <a href="{% url 'alm_app:home' %}" class="ml-2 flex items-center">
+          <!-- <img src="{% static 'images/icon.webp' %}" alt="ALM Logo" class="h-8 w-8 rounded-full"> -->
+          <span class="ml-2 text-lg font-semibold">Liquidity Risk Management</span>
+        </a>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <button
+          class="relative inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-orange-50 hover:text-orange-600 transition"
+          aria-label="Notifications">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 17h5l-5 5-5-5h5V12a9 9 0 10-9 9h9.5" />
+          </svg>
+          <span class="absolute -top-0.5 -right-0.5 h-2 w-2 bg-orange-500 rounded-full ring-2 ring-white"></span>
+        </button>
+
+        <button class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">
+          <span class="grid place-items-center h-8 w-8 rounded-full bg-[#171426] text-orange-500 font-semibold">
+            {% if user.first_name %}{{ user.first_name|first|upper }}{% else %}{{ user.username|first|upper }}{% endif %}
+          </span>
+          <span class="text-sm font-medium text-gray-800">User</span>
+          <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed z-30 top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white border-r border-gray-200
+                -translate-x-full transition-transform duration-200 ease-in-out
+                lg:translate-x-0">
+    <nav id="sidebar-nav" class="p-3 space-y-1 overflow-y-auto h-full"></nav>
+  </aside>
+
+  <!-- Top Navigation (centered pills with icons) -->
+  <nav class="fixed z-30 top-16 left-0 lg:left-64 right-0 h-12 bg-white border-b border-gray-200">
+    <div class="h-full flex items-center justify-center gap-6">
+      <a href="{% url 'LCR:home_lcr' %}" data-title="Dashboard" data-urlname="home_lcr"
+        class="top-nav-item inline-flex items-center gap-2 h-8 px-4 rounded-full text-[15px] font-medium text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        Dashboard
+      </a>
+
+      <a href="{% url 'LCR:lcr_run' %}" data-title="Run LRM" data-urlname="lcr_run"
+        class="top-nav-item inline-flex items-center gap-2 h-8 px-4 rounded-full text-[15px] font-medium text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Executions
+      </a>
+
+      <!-- Reports defaults to LCR Report -->
+      <a href="{% url 'LCR:lcr_records' %}" data-title="Reports" data-has-submenu="true"
+        class="top-nav-item inline-flex items-center gap-2 h-8 px-4 rounded-full text-[15px] font-medium text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm5 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0h6" />
+        </svg>
+        Reports
+      </a>
+
+      <!-- Data Management defaults to Upload HQLA -->
+      <a href="{% url 'LCR:upload_hqla' %}" data-title="Data Management" data-has-submenu="true"
+        class="top-nav-item inline-flex items-center gap-2 h-8 px-4 rounded-full text-[15px] font-medium text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+        </svg>
+        Data Management
+      </a>
+
+      <a href="{% url 'LCR:configs' %}" data-title="Configurations" data-urlname="configs"
+        class="top-nav-item inline-flex items-center gap-2 h-8 px-4 rounded-full text-[15px] font-medium text-gray-700 hover:text-orange-600 hover:bg-orange-50 transition">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        Configurations
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="pt-28 lg:ml-64 min-h-screen bg-gray-50">
+    <div class="w-full px-0 sm:px-1 lg:px-2 py-4">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- JS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const sidebar = document.getElementById('sidebar');
+      const sidebarToggle = document.getElementById('sidebar-toggle'); // declared once
+      const sidebarNav = document.getElementById('sidebar-nav');
+      const topNavItems = document.querySelectorAll('.top-nav-item');
+      const urlName = window.currentUrlName || '';
+
+      // small icon set for sidebar rendering
+      const icons = {
+        home: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>`,
+        run: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+        cog: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
+        db: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>`,
+        chart: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm5 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0h6"/></svg>`,
+        upload: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M4 12l8-8m0 0l8 8M12 4v12"/></svg>`
+      };
+
+      const activate = (el) => el.classList.add('bg-[#171426]', 'text-white', 'shadow-sm');
+      const deactivate = (el) => el.classList.remove('bg-[#171426]', 'text-white', 'shadow-sm');
+
+      function setSidebarSingle(title, href) {
+        // pick an icon for the current single page
+        let icon = icons.home;
+        if (title.includes('Run')) icon = icons.run;
+        if (title.includes('Config')) icon = icons.cog;
+
+        sidebarNav.innerHTML = `
+          <div class="px-3 pb-2 text-[11px] tracking-wide text-gray-500 uppercase">Current</div>
+          <a href="${href}" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-[#171426] text-white border-l-4 border-orange-500">
+            ${icon}
+            <span>${title}</span>
+          </a>`;
+        if (window.innerWidth < 1024) {
+          sidebar.classList.remove('-translate-x-full');
+          sidebar.classList.add('translate-x-0');
+        }
+      }
+
+      function updateSidebarContent(navType) {
+        let html = '';
+        if (navType === 'Data Management') {
+          html = `
+            <div class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-md flex items-center gap-2">
+              ${icons.db}<span>Data Management</span>
+            </div>
+            <ul class="mt-2 space-y-1">
+              <li><a href="{% url 'LCR:upload_hqla' %}" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm {% if request.resolver_match.url_name == 'upload_hqla' %}bg-[#171426] text-white border-l-4 border-orange-500{% else %}hover:bg-orange-50 hover:text-orange-600{% endif %}">${icons.upload}<span>Upload HQLA</span></a></li>
+              <li><a href="{% url 'LCR:upload_cash_inflow' %}" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm {% if request.resolver_match.url_name == 'upload_cash_inflow' %}bg-[#171426] text-white border-l-4 border-orange-500{% else %}hover:bg-orange-50 hover:text-orange-600{% endif %}">${icons.upload}<span>Upload Cash Inflows</span></a></li>
+              <li><a href="{% url 'LCR:upload_cash_outflow' %}" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm {% if request.resolver_match.url_name == 'upload_cash_outflow' %}bg-[#171426] text-white border-l-4 border-orange-500{% else %}hover:bg-orange-50 hover:text-orange-600{% endif %}">${icons.upload}<span>Upload Cash Outflows</span></a></li>
+              <li><a href="{% url 'LCR:upload_asf' %}" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm {% if request.resolver_match.url_name == 'upload_asf' %}bg-[#171426] text-white border-l-4 border-orange-500{% else %}hover:bg-orange-50 hover:text-orange-600{% endif %}">${icons.upload}<span>Upload Available Stable Funding</span></a></li>
+              <li><a href="{% url 'LCR:upload_rsf' %}" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm {% if request.resolver_match.url_name == 'upload_rsf' %}bg-[#171426] text-white border-l-4 border-orange-500{% else %}hover:bg-orange-50 hover:text-orange-600{% endif %}">${icons.upload}<span>Upload Required Stable Funding</span></a></li>
+            </ul>`;
+        }
+        if (navType === 'Reports') {
+          html = `
+            <div class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-md flex items-center gap-2">
+              ${icons.chart}<span>Reports</span>
+            </div>
+            <ul class="mt-2 space-y-1">
+              <li><a href="{% url 'LCR:lcr_records' %}" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm {% if request.resolver_match.url_name == 'lcr_records' %}bg-[#171426] text-white border-l-4 border-orange-500{% else %}hover:bg-orange-50 hover:text-orange-600{% endif %}">${icons.chart}<span>LCR Report</span></a></li>
+              <li><a href="{% url 'LCR:nsfr_records' %}" class="flex items-center gap-2 px-3 py-2 rounded-md text-sm {% if request.resolver_match.url_name == 'nsfr_records' %}bg-[#171426] text-white border-l-4 border-orange-500{% else %}hover:bg-orange-50 hover:text-orange-600{% endif %}">${icons.chart}<span>NSFR Report</span></a></li>
+            </ul>`;
+        }
+        sidebarNav.innerHTML = html;
+        if (window.innerWidth < 1024 && html) {
+          sidebar.classList.remove('-translate-x-full');
+          sidebar.classList.add('translate-x-0');
+        }
+      }
+
+      function initializeActiveState() {
+        const uploadNames = ['upload_hqla', 'upload_cash_inflow', 'upload_cash_outflow', 'upload_asf', 'upload_rsf'];
+        const reportNames = ['lcr_records', 'nsfr_records'];
+        const singleMap = { home: 'Dashboard', lcr_run: 'Run LRM', configs: 'Configurations' };
+
+        topNavItems.forEach(item => {
+          const hasSubmenu = item.dataset.hasSubmenu === 'true';
+          const title = item.dataset.title;
+          const href = item.getAttribute('href');
+          const itemUrlName = item.dataset.urlname || '';
+
+          if (hasSubmenu && title === 'Data Management' && uploadNames.includes(urlName)) {
+            activate(item);
+            updateSidebarContent('Data Management');
+          } else if (hasSubmenu && title === 'Reports' && reportNames.includes(urlName)) {
+            activate(item);
+            updateSidebarContent('Reports');
+          } else if (!hasSubmenu && itemUrlName === urlName) {
+            activate(item);
+            setSidebarSingle(singleMap[itemUrlName] || title, href);
+          }
+        });
+      }
+
+      topNavItems.forEach(item => {
+        item.addEventListener('click', function () {
+          const hasSubmenu = this.dataset.hasSubmenu === 'true';
+          const title = this.dataset.title || this.textContent.trim();
+          const href = this.getAttribute('href');
+          const itemUrlName = this.dataset.urlname || '';
+
+          topNavItems.forEach(deactivate);
+          activate(this);
+
+          if (hasSubmenu) {
+            // Let browser navigate to the default link (LCR Report / Upload HQLA),
+            // but also update the sidebar immediately for a snappy feel.
+            updateSidebarContent(title);
+          } else {
+            if (['home', 'lcr_run', 'configs'].includes(itemUrlName)) {
+              setSidebarSingle(title, href);
+            } else {
+              sidebarNav.innerHTML = '';
+            }
+          }
+        });
+      });
+
+      // mobile sidebar toggle
+      sidebarToggle.addEventListener('click', function () {
+        const hidden = sidebar.classList.contains('-translate-x-full');
+        sidebar.classList.toggle('-translate-x-full', !hidden);
+        sidebar.classList.toggle('translate-x-0', hidden);
+      });
+
+      // close on outside click (mobile)
+      document.addEventListener('click', function (e) {
+        if (window.innerWidth < 1024) {
+          if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+            sidebar.classList.add('-translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+          }
+        }
+      });
+
+      // keep desktop sane on resize
+      window.addEventListener('resize', function () {
+        if (window.innerWidth >= 1024) {
+          sidebar.classList.remove('-translate-x-full');
+          sidebar.classList.remove('translate-x-0');
+        }
+      });
+
+      initializeActiveState();
+    });
+  </script>
+</body>
+
+</html>

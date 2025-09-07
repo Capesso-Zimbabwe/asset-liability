@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <a href="{% url 'alm_app:pattern-list' %}" class="me-3 text-muted text-decoration-none">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="h3 fw-bold text-dark mb-1">Splits for {{ pattern.v_prod_type }}</h1>
+                    <p class="text-muted small mb-0">Manage bucket splits and percentages for this behavioral pattern</p>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Pattern Info Card -->
+    <div class="alert alert-primary d-flex align-items-center mb-4">
+        <div class="flex-shrink-0 me-3">
+            <div class="rounded-circle bg-primary bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                <svg width="24" height="24" class="text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+            </div>
+        </div>
+        <div>
+            <h5 class="fw-medium text-primary mb-1">{{ pattern.v_prod_type }}</h5>
+            <p class="text-primary mb-0 small">{{ pattern.description|default:"No description provided" }}</p>
+        </div>
+    </div>
+
+    <!-- Splits List -->
+    <div class="card shadow-sm">
+        {% if splits %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="fw-medium text-muted small text-uppercase">Bucket Number</th>
+                            <th class="fw-medium text-muted small text-uppercase">Percentage</th>
+                            <th class="fw-medium text-muted small text-uppercase">Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for split in splits %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                            <span class="fw-medium text-secondary small">{{ split.bucket_number }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="fw-medium text-dark">Bucket {{ split.bucket_number }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress me-3" style="width: 100px; height: 8px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ split.percentage }}%" aria-valuenow="{{ split.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="fw-medium text-dark">{{ split.percentage }}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-dark">{{ split.note|default:"No note" }}</div>
+                            </td>
+                            
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Summary -->
+            <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    Total splits: <span class="fw-medium">{{ splits.count }}</span>
+                </div>
+                <div class="text-muted small">
+                    Total percentage: 
+                    <span class="fw-medium {% if splits|length > 0 and splits|length == 100 %}text-success{% else %}text-danger{% endif %}">
+                        {{ 100 }}%
+                    </span>
+                </div>
+            </div>
+        {% else %}
+            <div class="card-body text-center py-5">
+                <svg width="48" height="48" class="text-muted mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                <h5 class="fw-medium text-dark">No splits</h5>
+                <p class="text-muted mb-3">Get started by creating bucket splits for this pattern.</p>
+                <a href="{% url 'alm_app:split-create' pattern.id %}" class="btn d-inline-flex align-items-center" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                    <svg width="16" height="16" class="me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Add Split
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

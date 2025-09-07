@@ -1,0 +1,148 @@
+{% extends "base/base.html" %}
+{% load tailwind_tags %}
+
+{% block content %}
+<div class="py-8 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
+  <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow">
+
+    {# Flash messages #}
+    {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for message in messages %}
+          <div class="px-4 py-2 rounded
+                      {% if message.tags == 'success' %} bg-green-100 text-green-800
+                      {% elif message.tags == 'error' %} bg-red-100 text-red-800
+                      {% else %} bg-gray-100 text-gray-800 {% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# Debug information #}
+    {% if debug_errors %}
+      <div class="mb-4 p-4 bg-yellow-100 rounded border">
+        <h3 class="text-sm font-semibold text-yellow-800 mb-2">Debug Information:</h3>
+        <ul class="text-xs text-yellow-700 list-disc list-inside">
+          {% for error in debug_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {# Formset-level errors #}
+    {% if formset.non_form_errors %}
+      <div class="mb-4 p-4 bg-red-100 rounded border">
+        <h3 class="text-sm font-semibold text-red-800 mb-2">Formset Errors:</h3>
+        <ul class="text-sm text-red-700 list-disc list-inside">
+          {% for error in formset.non_form_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-base font-semibold text-gray-900">
+        Edit Configurations – {{ entity_label }}
+      </h1>
+
+      <div class="flex space-x-2">
+        <a href="?entity={{ entity_key }}"
+           class="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300">
+          ← Back to View
+        </a>
+      </div>
+    </div>
+
+    <p class="mb-6 text-sm text-gray-700">
+      Edit names and weights for the selected entity below. Only Section and Item models are editable.
+      (Upload tables ending with <strong>Table</strong> are intentionally excluded.)
+    </p>
+
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      {{ formset.management_form }}
+      <input type="hidden" name="entity_key" value="{{ entity_key }}"/>
+
+      <div class="overflow-auto border border-gray-300 rounded">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="bg-[#171426] text-white">
+              {% with ef=formset.empty_form %}
+                {% for bf in ef.visible_fields %}
+                  {% if bf.name in fields %}
+                    <th class="px-3 py-2 border-b border-gray-300 text-left font-medium">
+                      {{ bf.label }}
+                    </th>
+                  {% endif %}
+                {% endfor %}
+              {% endwith %}
+              <th class="px-3 py-2 border-b border-gray-300 text-left font-medium">Delete?</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset.forms %}
+              {% if form.non_field_errors %}
+                <tr>
+                  <td colspan="{{ fields|length|add:1 }}" class="px-3 py-2 text-red-600">
+                    {{ form.non_field_errors }}
+                  </td>
+                </tr>
+              {% endif %}
+
+              <tr class="border-t border-gray-200 align-top hover:bg-gray-50">
+                {% for hf in form.hidden_fields %}{{ hf }}{% endfor %}
+
+                {% for field in form.visible_fields %}
+                  <td class="px-3 py-2 border-r border-gray-300">
+                    {{ field }}
+                    {% if field.errors %}
+                      <div class="mt-1 text-xs text-red-600">
+                        {{ field.errors|join:", " }}
+                      </div>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+
+                <td class="px-3 py-2">
+                  {% if formset.can_delete %}
+                    {{ form.DELETE }}
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <a href="?entity={{ entity_key }}"
+           class="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300">
+          Cancel
+        </a>
+        <div class="flex space-x-2">
+          <a href="?entity={{ entity_key }}&mode=edit"
+             class="px-4 py-2 rounded bg-gray-400 text-white hover:bg-gray-500">
+            Reset Form
+          </a>
+          <button type="submit"
+                  class="px-6 py-2 rounded bg-[#171426] hover:bg-[#695404] text-white font-medium">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div class="mt-6 text-xs text-gray-600">
+      Tips:
+      <ul class="list-disc list-inside">
+        <li>Three blank rows are provided for quick inserts.</li>
+        <li>Check "Delete?" to remove a row on save.</li>
+        <li>Use "Cancel" to return to the read-only view without saving changes.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

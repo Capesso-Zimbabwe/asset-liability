@@ -1,0 +1,94 @@
+{% extends "base/base.html" %}
+{% load tailwind_tags %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
+  <div class="max-w-4xl mx-auto text-gray-800 dark:text-gray-200">
+
+    {# --- Date Filter Form --- #}
+    <form method="get" class="mb-6 flex items-center space-x-4">
+      {# Preserve existing group flag #}
+      {% if request.GET.group %}
+        <input type="hidden" name="group" value="{{ request.GET.group }}">
+      {% endif %}
+      <label for="reporting_date" class="font-medium">Reporting Date:</label>
+      <select id="reporting_date" name="reporting_date" required
+              class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700
+                     text-gray-900 dark:text-gray-200 focus:ring-blue-500 focus:border-blue-500 transition">
+        <option value="">--Select Date--</option>
+        {% for d in reporting_dates %}
+          <option value="{{ d|date:'Y-m-d' }}"
+            {% if request.GET.reporting_date == d|date:'Y-m-d' %}selected{% endif %}>
+            {{ d|date:"F j, Y" }}
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit"
+              class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600
+                     text-gray-800 dark:text-gray-200 font-medium py-1 px-3 rounded transition">
+        Filter
+      </button>
+    </form>
+
+    <!-- Header + Group Button -->
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-3xl font-bold">High Quality Liquid Assets Records</h1>
+      <a href="?group=1{% if request.GET.reporting_date %}&reporting_date={{ request.GET.reporting_date }}{% endif %}"
+         class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition
+                {% if not request.GET.reporting_date %}opacity-50 cursor-not-allowed pointer-events-none{% endif %}">
+        Group Data
+      </a>
+    </div>
+
+    {% if request.GET.group and request.GET.reporting_date and grouped_data %}
+      {# Grouped view: one section per currency #}
+      {% for bucket in grouped_data %}
+        <section class="mb-12">
+          <h2 class="text-2xl font-semibold mb-4">{{ bucket.currency }}</h2>
+          <table class="w-full table-auto text-sm">
+            <thead>
+              <tr class="bg-gray-100 dark:bg-gray-700">
+                <th class="px-4 py-2 text-left">Date</th>
+                <th class="px-4 py-2 text-left">Name</th>
+                <th class="px-4 py-2 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for rec in bucket.records %}
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                  <td class="px-4 py-2">{{ rec.reporting_date }}</td>
+                  <td class="px-4 py-2">{{ rec.name }}</td>
+                  <td class="px-4 py-2 text-right">{{ rec.amount }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+      {% endfor %}
+    {% else %}
+      {# Ungrouped view: flat table with currency column #}
+      <table class="w-full table-auto text-sm">
+        <thead>
+          <tr class="bg-gray-100 dark:bg-gray-700">
+            <th class="px-4 py-2 text-left">Currency</th>
+            <th class="px-4 py-2 text-left">Date</th>
+            <th class="px-4 py-2 text-left">Name</th>
+            <th class="px-4 py-2 text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in records %}
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+              <td class="px-4 py-2">{{ rec.currency }}</td>
+              <td class="px-4 py-2">{{ rec.reporting_date }}</td>
+              <td class="px-4 py-2">{{ rec.name }}</td>
+              <td class="px-4 py-2 text-right">{{ rec.amount }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

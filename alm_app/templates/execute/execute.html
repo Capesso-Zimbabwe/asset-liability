@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}Execute Financial Pipeline{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header border-bottom d-flex justify-content-between align-items-center">
+          <h6 class="h5 fw-semibold text-dark mb-0">Execute Financial Pipeline</h6>
+          <a href="{% url 'alm_app:execution_history' %}" class="btn btn-outline-primary btn-sm">View History</a>
+        </div>
+
+        <div class="card-body">
+          {% if error %}
+          <div class="alert alert-danger" role="alert">
+            {{ error }}
+          </div>
+          {% endif %}
+
+          <!-- Date Selection Form -->
+          <form id="execute-form" method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="fic_mis_date" class="form-label fw-medium">
+                Financial MIS Date
+              </label>
+              <input
+                type="date"
+                id="fic_mis_date"
+                name="fic_mis_date"
+                value="{{ fic_mis_date }}"
+                required
+                class="form-control" />
+              <div class="form-text">Select the month-end date to process.</div>
+            </div>
+            <button type="submit" class="btn " style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+              Start Pipeline
+            </button>
+          </form>
+
+          <!-- Execution Progress Area -->
+          {% if ready_to_execute %}
+          <div id="execution-container" class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h4 class="h5 fw-medium text-dark mb-0">
+                Pipeline Execution: {{ fic_mis_date }}
+              </h4>
+              <span class="badge bg-primary">Run #{{ next_run }}</span>
+            </div>
+
+            <!-- Overall Progress -->
+            <div class="progress mb-4" style="height: 24px;">
+              <div id="overall-progress"
+                   class="progress-bar bg-primary text-white d-flex align-items-center justify-content-center fw-medium"
+                   role="progressbar"
+                   style="width:0%"
+                   aria-valuenow="0"
+                   aria-valuemin="0"
+                   aria-valuemax="100">0%</div>
+            </div>
+
+            <!-- Pipeline Steps Progress -->
+            <div class="row mb-4">
+              <div class="col-md-8">
+                <div id="pipeline-steps" class="mb-4"></div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-body">
+                    <h6 class="card-title fw-medium">Pipeline Statistics</h6>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="text-muted">Total Steps:</span>
+                      <span id="total-steps" class="fw-medium">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="text-muted">Completed:</span>
+                      <span id="completed-steps" class="fw-medium">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span class="text-muted">Running Time:</span>
+                      <span id="running-time" class="fw-medium">0s</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                      <span class="text-muted">Status:</span>
+                      <span id="pipeline-status" class="fw-medium text-primary">Initializing</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Execution Details Table -->
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead class="table-light">
+                  <tr>
+                    <th class="fw-medium text-muted small text-uppercase">Step</th>
+                    <th class="fw-medium text-muted small text-uppercase">Dependencies</th>
+                    <th class="fw-medium text-muted small text-uppercase">Status</th>
+                    <th class="fw-medium text-muted small text-uppercase">Time (s)</th>
+                    <th class="fw-medium text-muted small text-uppercase">Details</th>
+                  </tr>
+                </thead>
+                <tbody id="results-table-body"></tbody>
+              </table>
+            </div>
+
+            <!-- Execution Summary -->
+            <div id="execution-summary" class="mt-4" style="display:none;">
+              <div id="summary-box" class="alert alert-success">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h5 class="fw-medium mb-2">Pipeline Execution Complete</h5>
+                    <p class="mb-0">
+                      Run #<span id="run-number">{{ next_run }}</span> | 
+                      Total time: <span id="total-time">0</span>s
+                    </p>
+                  </div>
+                  <a href="{% url 'alm_app:execution_history' %}" class="btn btn-outline-primary">
+                    View History
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if ready_to_execute %}
+<script>
+(() => {
+  // Pipeline step definitions with dependencies
+  const PIPELINE_STEPS = [
+    {
+      name: 'Process First Day Cashflows',
+      dependencies: []
+    },
+    {
+      name: 'Process Credit Line Cashflows',
+      dependencies: ['Process First Day Cashflows']
+    },
+    {
+      name: 'Process Loan Cashflows',
+      dependencies: ['Process Credit Line Cashflows']
+    },
+    {
+      name: 'Balance Cashflows to Target',
+      dependencies: ['Process Loan Cashflows']
+    },
+    {
+      name: 'Process Overdraft Cashflows',
+      dependencies: ['Balance Cashflows to Target']
+    },
+    {
+      name: 'Process Investment Cashflows',
+      dependencies: ['Process Overdraft Cashflows']
+    },
+    {
+      name: 'Calculate Time Buckets and Spread',
+      dependencies: ['Process Investment Cashflows']
+    },
+    {
+      name: 'Aggregate by Product Code',
+      dependencies: ['Calculate Time Buckets and Spread']
+    },
+    {
+      name: 'Create Report Contractual Table',
+      dependencies: ['Aggregate by Product Code']
+    },
+    {
+      name: 'Load Contractual Report',
+      dependencies: ['Create Report Contractual Table']
+    },
+    {
+      name: 'Align Buckets to Balance',
+      dependencies: ['Load Contractual Report']
+    },
+    {
+      name: 'Load Contractual Consolidated Report',
+      dependencies: ['Align Buckets to Balance']
+    },
+    {
+      name: 'Load Behavioural Report',
+      dependencies: ['Load Contractual Consolidated Report']
+    },
+    {
+      name: 'Load Rate-Sensitive Report',
+      dependencies: ['Load Behavioural Report']
+    }
+  ];
+
+  // Status color mapping
+  const STATUS_STYLES = {
+    Pending: {
+      bg: 'bg-warning',
+      text: 'text-warning',
+      icon: '⏳'
+    },
+    Running: {
+      bg: 'bg-primary',
+      text: 'text-primary',
+      icon: '⚡'
+    },
+    Success: {
+      bg: 'bg-success',
+      text: 'text-success',
+      icon: '✓'
+    },
+    Failed: {
+      bg: 'bg-danger',
+      text: 'text-danger',
+      icon: '✗'
+    },
+    Skipped: {
+      bg: 'bg-secondary',
+      text: 'text-muted',
+      icon: '⊘'
+    }
+  };
+
+  // Initialize pipeline visualization
+  const pipelineContainer = document.getElementById('pipeline-steps');
+  const stepElements = PIPELINE_STEPS.map((step, index) => {
+    const stepId = `step-${index}`;
+    const html = `
+      <div class="pipeline-step mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <div class="d-flex align-items-center">
+            <span id="${stepId}-icon" class="me-2">⏳</span>
+            <span class="fw-medium">${step.name}</span>
+          </div>
+          <span id="${stepId}-status" class="badge bg-warning">Pending</span>
+        </div>
+        <div class="progress" style="height: 8px;">
+          <div id="${stepId}-progress" 
+               class="progress-bar bg-warning" 
+               role="progressbar" 
+               style="width:0%" 
+               aria-valuenow="0" 
+               aria-valuemin="0" 
+               aria-valuemax="100"></div>
+        </div>
+        <div class="mt-1">
+          <small id="${stepId}-deps" class="text-muted">
+            ${step.dependencies.length ? `Depends on: ${step.dependencies.join(', ')}` : 'No dependencies'}
+          </small>
+        </div>
+      </div>
+    `;
+    pipelineContainer.insertAdjacentHTML('beforeend', html);
+    return stepId;
+  });
+
+  // Update step status
+  function updateStepStatus(stepId, status, progress = 100) {
+    const style = STATUS_STYLES[status];
+    const iconEl = document.getElementById(`${stepId}-icon`);
+    const statusEl = document.getElementById(`${stepId}-status`);
+    const progressEl = document.getElementById(`${stepId}-progress`);
+    
+    if (iconEl) iconEl.textContent = style.icon;
+    if (statusEl) {
+      statusEl.textContent = status;
+      Object.values(STATUS_STYLES).forEach(s => {
+        statusEl.classList.remove(s.bg);
+        statusEl.classList.remove(s.text);
+      });
+      statusEl.classList.add(style.bg);
+    }
+    if (progressEl) {
+      progressEl.style.width = `${progress}%`;
+      progressEl.setAttribute('aria-valuenow', progress);
+      Object.values(STATUS_STYLES).forEach(s => progressEl.classList.remove(s.bg));
+      progressEl.classList.add(style.bg);
+    }
+  }
+
+  // Start pipeline execution
+  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const ficDate = document.getElementById('fic_mis_date').value;
+  const runNumber = {{ next_run }};
+
+  // Initialize statistics
+  document.getElementById('total-steps').textContent = PIPELINE_STEPS.length;
+  document.getElementById('completed-steps').textContent = '0';
+  
+  // Start execution
+  fetch("{% url 'alm_app:execute_view' %}", {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': csrftoken,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      fic_mis_date: ficDate,
+      execute_again: 'true',
+      force_new_execution: 'true'
+    })
+  }).catch(e => console.error('Pipeline start failed:', e));
+
+  // Poll execution status
+  const POLL_INTERVAL = 3000; // 3 seconds
+  let startTime = Date.now();
+  
+  const pollTimer = setInterval(() => {
+    fetch(`{% url 'alm_app:execution_status_api' %}?fic_mis_date=${encodeURIComponent(ficDate)}&run_number=${runNumber}`, {
+      cache: 'no-store'
+    })
+    .then(r => r.json())
+    .then(data => {
+      // Update running time
+      const runningTime = Math.round((Date.now() - startTime) / 1000);
+      document.getElementById('running-time').textContent = `${runningTime}s`;
+
+      // Process execution data
+      const completedSteps = data.executions.filter(e => e.status === 'Success').length;
+      document.getElementById('completed-steps').textContent = completedSteps;
+
+      // Update step statuses
+      data.executions.forEach(exe => {
+        const stepIndex = PIPELINE_STEPS.findIndex(s => s.name === exe.process_name);
+        if (stepIndex === -1) return;
+
+        const stepId = stepElements[stepIndex];
+        updateStepStatus(
+          stepId,
+          exe.status,
+          exe.status === 'Running' ? 50 : 100
+        );
+
+        // Update table
+        let row = document.getElementById(`row-${stepIndex}`);
+        if (!row) {
+          row = document.createElement('tr');
+          row.id = `row-${stepIndex}`;
+          document.getElementById('results-table-body').appendChild(row);
+        }
+
+        const style = STATUS_STYLES[exe.status];
+        row.innerHTML = `
+          <td class="fw-medium">${exe.process_name}</td>
+          <td class="text-muted small">${PIPELINE_STEPS[stepIndex].dependencies.join(', ') || 'None'}</td>
+          <td class="${style.text}">${exe.status}</td>
+          <td class="text-muted">${exe.execution_time || ''}</td>
+          <td class="text-muted small">${exe.error_message || ''}</td>
+        `;
+      });
+
+      // Update overall progress
+      const progress = Math.round((completedSteps / PIPELINE_STEPS.length) * 100);
+      const overallBar = document.getElementById('overall-progress');
+      overallBar.style.width = `${progress}%`;
+      overallBar.setAttribute('aria-valuenow', progress);
+      overallBar.textContent = `${progress}%`;
+
+      // Check completion
+      const failed = data.executions.some(e => e.status === 'Failed');
+      if (completedSteps === PIPELINE_STEPS.length || failed) {
+        clearInterval(pollTimer);
+        
+        // Update summary
+        const summary = document.getElementById('execution-summary');
+        const summaryBox = document.getElementById('summary-box');
+        document.getElementById('total-time').textContent = data.total_execution_time || '0';
+        summary.style.display = 'block';
+        
+        if (failed) {
+          summaryBox.classList.remove('alert-success');
+          summaryBox.classList.add('alert-danger');
+          summaryBox.querySelector('h5').textContent = 'Pipeline Failed';
+          document.getElementById('pipeline-status').textContent = 'Failed';
+          document.getElementById('pipeline-status').className = 'fw-medium text-danger';
+        } else {
+          document.getElementById('pipeline-status').textContent = 'Completed';
+          document.getElementById('pipeline-status').className = 'fw-medium text-success';
+        }
+      }
+    })
+    .catch(err => {
+      console.error('Status poll failed:', err);
+      clearInterval(pollTimer);
+      document.getElementById('pipeline-status').textContent = 'Error';
+      document.getElementById('pipeline-status').className = 'fw-medium text-danger';
+    });
+  }, POLL_INTERVAL);
+})();
+</script>
+
+<style>
+.pipeline-step {
+  padding: 1rem;
+  border: 1px solid rgba(0,0,0,.125);
+  border-radius: .25rem;
+  background-color: #fff;
+}
+
+.pipeline-step:not(:last-child) {
+  margin-bottom: 1rem;
+}
+
+.progress {
+  background-color: rgba(0,0,0,.05);
+}
+</style>
+{% endif %}
+{% endblock %}

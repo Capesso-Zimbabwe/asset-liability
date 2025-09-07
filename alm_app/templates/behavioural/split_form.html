@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container" style="max-width: 768px;">
+    <!-- Header -->
+    <div class="mb-4">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'alm_app:split-list' form.instance.pattern.id %}" class="me-3 text-muted text-decoration-none">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+            </a>
+            <div>
+                <h1 class="h3 fw-bold text-dark mb-1">
+                    {% if form.instance.pk %}Edit{% else %}Add{% endif %} Split
+                </h1>
+                <p class="text-muted small mb-0">
+                    {% if form.instance.pk %}
+                        Update the bucket split details
+                    {% else %}
+                        Create a new bucket split for pattern: {{ form.instance.pattern.v_prod_type }}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <!-- Bucket Number Field -->
+                <div class="mb-4">
+                    <label for="{{ form.bucket_number.id_for_label }}" class="form-label fw-medium">
+                        Bucket Number <span class="text-danger">*</span>
+                    </label>
+                    <div class="position-relative">
+                        <div class="position-absolute top-50 start-0 translate-middle-y ps-3">
+                            <svg width="20" height="20" class="text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                            </svg>
+                        </div>
+                        {{ form.bucket_number }}
+                    </div>
+                    {% if form.bucket_number.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.bucket_number.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">The bucket number for this split</div>
+                </div>
+
+                <!-- Percentage Field -->
+                <div class="mb-4">
+                    <label for="{{ form.percentage.id_for_label }}" class="form-label fw-medium">
+                        Percentage <span class="text-danger">*</span>
+                    </label>
+                    <div class="position-relative">
+                        <div class="position-absolute top-50 start-0 translate-middle-y ps-3">
+                            <svg width="20" height="20" class="text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        {{ form.percentage }}
+                    </div>
+                    {% if form.percentage.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.percentage.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">Percentage value between 0 and 100</div>
+                </div>
+
+                <!-- Note Field -->
+                <div class="mb-4">
+                    <label for="{{ form.note.id_for_label }}" class="form-label fw-medium">
+                        Note
+                    </label>
+                    <div class="position-relative">
+                        <div class="position-absolute top-0 start-0 ps-3 pt-3">
+                            <svg width="20" height="20" class="text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                            </svg>
+                        </div>
+                        {{ form.note }}
+                    </div>
+                    {% if form.note.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.note.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">Optional note for this split</div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <a href="{% url 'alm_app:split-list' form.instance.pattern.id %}" class="btn btn-outline-secondary d-flex align-items-center">
+                        <svg width="16" height="16" class="me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn d-flex align-items-center" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                        <svg width="16" height="16" class="me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        {% if form.instance.pk %}Update{% else %}Create{% endif %} Split
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    #{{ form.bucket_number.id_for_label }} {
+        padding-left: 2.5rem;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+    }
+    
+    #{{ form.percentage.id_for_label }} {
+        padding-left: 2.5rem;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+    }
+    
+    #{{ form.note.id_for_label }} {
+        padding-left: 2.5rem;
+        min-height: 80px;
+        resize: vertical;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}

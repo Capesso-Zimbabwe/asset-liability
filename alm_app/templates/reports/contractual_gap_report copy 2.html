@@ -1,0 +1,2195 @@
+{% extends "base.html" %}
+{% load static %}
+{% load report_filters %}
+
+{% block title %}Contractual Gap Report{% endblock %}
+
+{% block extra_head %}
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+            {{ block.super }}
+
+        .nav-bar {
+            background: linear-gradient(135deg, #4b4d4b 0%, #464746 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .nav-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .nav-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        .report-container {
+            background-color: white;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+        }
+        
+        .report-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .report-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .report-metadata {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .metadata-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .drill-down-controls {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .currency-filter-controls {
+            background: #fff3e0;
+            border: 1px solid #ffcc02;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        .filter-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn:hover {
+            background: #f57c00;
+        }
+        
+        .filter-btn.active {
+            background: #e65100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .filter-btn.loading {
+            opacity: 0.6;
+            cursor: not-allowed;
+            position: relative;
+        }
+        
+        .filter-btn.loading::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            width: 12px;
+            height: 12px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            transform: translateY(-50%);
+        }
+        
+        .currency-section {
+            margin-bottom: 40px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .currency-header {
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .currency-content {
+            padding: 20px;
+            background: white;
+        }
+        
+        .download-controls {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .download-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .download-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .download-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .download-btn:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+        
+        .download-btn:active {
+            transform: translateY(0);
+        }
+        
+        .download-btn.downloading {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .download-description {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .controls-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #1976d2;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            background: #1976d2;
+        }
+        
+        .control-btn.secondary {
+            background: #6c757d;
+        }
+        
+        .control-btn.secondary:hover {
+            background: #545b62;
+        }
+        
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 12px;
+            min-width: 1200px; /* Ensure minimum width for proper layout */
+            white-space: nowrap;
+        }
+        
+        .report-table th,
+        .report-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+        
+        .report-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .report-table td:first-child,
+        .report-table td:nth-child(2) {
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        /* Product type rows (Level 1 - aggregated) */
+        .product-type-row {
+            background-color: #e8f5e8;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .product-type-row:hover {
+            background-color: #d4edda;
+        }
+        
+        .product-type-row.expanded {
+            background-color: #c3e6cb;
+        }
+        
+        /* Product name rows (Level 2) */
+        .product-name-row {
+            background-color: #fff3cd;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: none; /* Hidden by default */
+        }
+        
+        .product-name-row.visible {
+            display: table-row;
+        }
+        
+        .product-name-row:hover {
+            background-color: #ffeaa7;
+        }
+        
+        .product-name-row.expanded {
+            background-color: #ffeb3b;
+        }
+        
+        .product-name-row td:first-child {
+            padding-left: 25px;
+        }
+        
+        .product-name-row td:nth-child(2) {
+            padding-left: 25px;
+            font-weight: bold;
+        }
+        
+        /* Product split rows (Level 3) */
+        .product-split-row {
+            background-color: #f8f9fa;
+            display: none; /* Hidden by default */
+        }
+        
+        .product-split-row.visible {
+            display: table-row;
+        }
+        
+        .product-split-row td:first-child {
+            padding-left: 45px;
+        }
+        
+        .product-split-row td:nth-child(2) {
+            padding-left: 45px;
+            font-weight: normal;
+            font-style: italic;
+            color: #666;
+        }
+        
+        /* Individual product rows (fallback for products without splits) */
+        .product-row {
+            background-color: #fff3cd;
+            display: none; /* Hidden by default */
+        }
+        
+        .product-row.visible {
+            display: table-row;
+        }
+        
+        .product-row td:first-child {
+            padding-left: 25px;
+        }
+        
+        .product-row td:nth-child(2) {
+            padding-left: 25px;
+            font-weight: normal;
+            font-style: italic;
+        }
+        
+        /* Summary rows */
+        .summary-row {
+            background-color: #e9ecef;
+            font-weight: bold;
+            font-style: italic;
+            font-size: 14px;
+
+
+            
+        }
+        
+        .section-header {
+            background-color: #d4edda;
+            font-weight: bold;
+            text-align: left !important;
+        }
+        
+        .inflow-section {
+            background-color: #d1ecf1;
+            font-size: 14px;
+
+        }
+        
+        .outflow-section {
+            background-color: #f8d7da;
+            font-size: 14px;
+
+        }
+        
+        .net-gap-section {
+            background-color: #fff3cd;
+            font-size: 14px;
+
+        }
+        
+        .cumulative-section {
+            background-color: #e2e3e5;
+            font-size: 14px;
+
+        }
+        
+        .amount {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: right;
+            padding-right: 12px;
+        }
+        
+        .negative {
+            color: #dc3545;
+        }
+        
+        .positive {
+            color: #28a745;
+        }
+        
+        .zero {
+            color: #6c757d;
+        }
+        
+        .percentage {
+            font-style: italic;
+            font-size: 12px;
+        }
+        
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 10;
+            font-size: 14px;
+            font-style: italic;
+
+
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: visible;
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: white;
+            position: relative;
+        }
+        
+        .table-wrapper::-webkit-scrollbar {
+            height: 12px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 6px;
+            border: 2px solid #f1f1f1;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        .table-wrapper::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 20px;
+            height: 100%;
+            background: linear-gradient(to left, rgba(255,255,255,0.9), transparent);
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .table-wrapper.has-overflow::before {
+            opacity: 1;
+        }
+        
+        .scroll-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .table-wrapper.has-overflow .scroll-indicator {
+            opacity: 1;
+        }
+        
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 12px;
+            min-width: 1200px; /* Ensure minimum width for proper layout */
+            white-space: nowrap;
+        }
+        
+        .bucket-header {
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+            min-width: 100px;
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 10px 6px;
+            font-size: 14px;
+            line-height: 1.3;
+        }
+        
+        .bucket-header-main {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 3px;
+            font-size: 14px;
+        }
+        
+        .bucket-header-sub {
+            font-size: 12px;
+            color: #666;
+            font-weight: normal;
+        }
+        
+        .bucket-header.long-term {
+            background-color: #e8f4f8;
+        }
+        
+        .bucket-header.short-term {
+            background-color: #fff8e1;
+        }
+        
+        .expand-icon {
+            display: inline-block;
+            margin-right: 5px;
+            font-weight: bold;
+            color: #007bff;
+            transition: transform 0.3s ease;
+        }
+        
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+        
+        .product-count {
+            font-size: 10px;
+            color: #666;
+            font-weight: normal;
+        }
+        
+        .split-count {
+            font-size: 9px;
+            color: #888;
+            font-weight: normal;
+        }
+        
+        .action-buttons {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+        
+        .action-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .action-btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .action-btn.success {
+            background: #28a745;
+        }
+        
+        .action-btn.success:hover {
+            background: #1e7e34;
+        }
+        
+        .time-range-legend {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .legend-short-term {
+            background-color: #fff8e1;
+            border: 1px solid #ffc107;
+        }
+        
+        .legend-long-term {
+            background-color: #e8f4f8;
+            border: 1px solid #17a2b8;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                background-color: white;
+            }
+            
+            .nav-bar,
+            .action-buttons,
+            .report-metadata,
+            .drill-down-controls,
+            .currency-filter-controls {
+                display: none;
+            }
+            
+            .report-container {
+                box-shadow: none;
+                padding: 10px;
+                margin: 0;
+            }
+            
+            .report-table {
+                font-size: 10px;
+            }
+            
+            .bucket-header {
+                font-size: 12px;
+            }
+            
+            .bucket-header-main {
+                font-size: 12px;
+            }
+            
+            .bucket-header-sub {
+                font-size: 10px;
+            }
+            
+            .amount {
+                font-size: 11px;
+            }
+            
+            .product-row {
+                display: table-row !important;
+            }
+            
+            .currency-section {
+                page-break-inside: avoid;
+                margin-bottom: 30px;
+            }
+            
+            .currency-header {
+                page-break-after: avoid;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .nav-bar {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .nav-actions {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .report-container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .report-metadata {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .action-buttons {
+                position: static;
+                flex-direction: row;
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+            
+            .bucket-header {
+                min-width: 80px;
+                max-width: 100px;
+                font-size: 12px;
+                padding: 8px 4px;
+            }
+            
+            .bucket-header-main {
+                font-size: 12px;
+            }
+            
+            .bucket-header-sub {
+                font-size: 10px;
+            }
+            
+            .legend-items {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .control-buttons {
+                justify-content: center;
+            }
+            
+            .table-wrapper {
+                margin: 0 -15px;
+                border-radius: 0;
+            }
+            
+            .table-container {
+                border-radius: 0;
+            }
+            
+            .scroll-indicator {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+            
+            .scroll-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+            
+            .report-table {
+                font-size: 10px;
+                min-width: 1000px;
+            }
+            
+            .amount {
+                font-size: 11px;
+            }
+        }
+        .table-container {
+            position: relative;
+            overflow-x: auto;
+            overflow-y: visible;
+            border-radius: 4px;
+        }
+        
+        .table-container::-webkit-scrollbar {
+            height: 12px;
+        }
+        
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 6px;
+            border: 2px solid #f1f1f1;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        .scroll-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.3s ease;
+            display: none;
+        }
+        
+        .scroll-btn:hover {
+            background: rgba(0,0,0,0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .scroll-btn-left {
+            left: 10px;
+        }
+        
+        .scroll-btn-right {
+            right: 10px;
+        }
+        
+        .table-container.has-overflow .scroll-btn {
+            display: block;
+        }
+        
+        .table-container:focus {
+            outline: 2px solid #007bff;
+            outline-offset: 2px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="nav-bar">
+        <div class="nav-title">📊 Contractual Gap Report</div>
+        <div class="nav-actions">
+            <a href="{% url 'alm_app:contractual_gap_report_form' %}" class="nav-btn">← Back to Form</a>
+            <a href="{% url 'alm_app:adjustments_manage' fic_mis_date=fic_mis_date process_name=process_name %}" class="nav-btn">🔧 Adjustments</a>
+        </div>
+    </div>
+    
+    <div class="report-container">
+        <div class="report-header">
+            <div class="report-title">Contractual Gap Detail - Product in Base Currency</div>
+            <div class="report-subtitle">Date: {{ fic_mis_date|date:"d-M-Y" }}</div>
+            <div class="report-subtitle">Process: {{ process_name }}</div>
+        </div>
+        
+        <div class="report-metadata">
+            <div class="metadata-item">
+                <span>📅 Report Date:</span>
+                <span class="metadata-value">{{ fic_mis_date|date:"d-M-Y" }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>⚙️ Process:</span>
+                <span class="metadata-value">{{ process_name }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>💱 Currency:</span>
+                <span class="metadata-value">
+                    {% if show_all_currencies %}
+                        All Currencies ({{ available_currencies|length }})
+                    {% else %}
+                        {{ selected_currency }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="metadata-item">
+                <span>🗂️ Table:</span>
+                <span class="metadata-value">{{ table_name }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>📊 Records:</span>
+                <span class="metadata-value">{{ total_record_count }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>📈 Buckets:</span>
+                <span class="metadata-value">{{ bucket_columns|length }}</span>
+            </div>
+            <div class="metadata-item">
+                <span>🕐 Generated:</span>
+                <span class="metadata-value">{{ "now"|date:"d-M-Y H:i" }}</span>
+            </div>
+        </div>
+        
+        <div class="currency-filter-controls">
+            <div class="controls-title">💱 Currency Filter</div>
+            <div class="filter-buttons">
+                <button class="filter-btn {% if show_all_currencies %}active{% endif %}" 
+                        onclick="filterCurrency('all')"
+                        data-currency="all">
+                    🌍 All Currencies
+                </button>
+                {% for currency in available_currencies %}
+                <button class="filter-btn {% if selected_currency == currency and not show_all_currencies %}active{% endif %}" 
+                        onclick="filterCurrency('{{ currency }}')"
+                        data-currency="{{ currency }}">
+                    {{ currency }}
+                </button>
+                {% endfor %}
+            </div>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                <strong>Current Selection:</strong> 
+                {% if show_all_currencies %}
+                    All Currencies ({{ available_currencies|length }} currencies)
+                {% else %}
+                    {{ selected_currency }} only
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="drill-down-controls">
+            <div class="controls-title">🔍 Drill-Down Controls</div>
+            <p style="margin: 5px 0; font-size: 12px; color: #666;">
+                Double-click on product types to expand/collapse individual products. 
+                Gap calculations update automatically based on visible data.
+            </p>
+            <div class="control-buttons">
+                <button class="control-btn" onclick="expandAllLevels()">🌳 Expand All Levels</button>
+                <button class="control-btn" onclick="expandAllProductTypes()">📂 Expand Types Only</button>
+                <button class="control-btn" onclick="collapseAllLevels()">📁 Collapse All</button>
+                <button class="control-btn secondary" onclick="recalculateGaps()">🔄 Recalculate Gaps</button>
+            </div>
+        </div>
+        
+        <div class="time-range-legend">
+            <div class="legend-title">📅 Time Range Legend</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color legend-short-term"></div>
+                    <span>Short Term (≤ 1 year)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-long-term"></div>
+                    <span>Long Term (> 1 year)</span>
+                </div>
+                <div class="legend-item">
+                    <span><strong>Format:</strong> "91-180 days", "1.5-2.0 years", "Over 5 years"</span>
+                </div>
+                <div class="legend-item">
+                    <span><strong>Drill-down:</strong> Double-click product types to expand details</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-btn" onclick="window.location.reload()">🔄 Refresh</button>
+        </div>
+        
+        <div class="table-wrapper">
+            {% for currency_code, currency_report in currency_reports.items %}
+            <div class="currency-section" data-currency="{{ currency_code }}">
+                <div class="currency-header">
+                    💱 {{ currency_code }} Currency Report
+                    <span style="font-size: 14px; opacity: 0.9;">
+                        ({{ currency_report.record_count }} records)
+                    </span>
+                </div>
+                
+                <div class="currency-content">
+                    <div class="download-controls">
+                        <div class="download-title">
+                            📥 Export {{ currency_code }} Data
+                        </div>
+                        <div class="download-options">
+                            <button class="download-btn" onclick="exportCurrencyData('{{ currency_code }}', 'summary', this)">
+                                📊 Summary Level
+                            </button>
+                            <button class="download-btn" onclick="exportCurrencyData('{{ currency_code }}', 'product_type', this)">
+                                📂 Product Type Level
+                            </button>
+                            <button class="download-btn" onclick="exportCurrencyData('{{ currency_code }}', 'product_name', this)">
+                                📄 Product Name Level
+                            </button>
+                            <button class="download-btn" onclick="exportCurrencyData('{{ currency_code }}', 'splits', this)">
+                                🔍 Full Detail (Splits)
+                            </button>
+                        </div>
+                        <div class="download-description">
+                            <strong>Summary:</strong> Only totals and gap calculations |
+                            <strong>Product Type:</strong> Aggregated by product types |
+                            <strong>Product Name:</strong> Individual product names |
+                            <strong>Full Detail:</strong> All splits and individual products
+                        </div>
+                    </div>
+                    
+                    <div class="table-container" id="tableContainer_{{ currency_code }}">
+                        <div class="scroll-indicator">← Scroll to see more columns →</div>
+                        <table class="report-table" id="reportTable_{{ currency_code }}">
+                        <thead>
+                            <tr class="sticky-header">
+                                <th rowspan="2">Account Type</th>
+                                <th rowspan="2">Product Type / Name</th>
+                                {% for bucket in bucket_columns %}
+                                <th class="bucket-header {% if bucket.is_long_term %}long-term{% else %}short-term{% endif %}">
+                                    <div class="bucket-header-main">{{ bucket.display_name }}</div>
+                                    <div class="bucket-header-sub">{{ bucket.header_display }}</div>
+                                </th>
+                                {% endfor %}
+                                <th rowspan="2">Adjusted Amount</th>
+                                <th rowspan="2">Total<br><small>(Bucket Values Only)</small></th>
+                                <th rowspan="2">Total After Adjustment<br><small>(Total + Adjusted)</small></th>
+                            </tr>
+                            <tr class="sticky-header">
+                                {% for bucket in bucket_columns %}
+                                <th class="bucket-header {% if bucket.is_long_term %}long-term{% else %}short-term{% endif %}">
+                                    <div class="bucket-header-sub">{{ bucket.short_display }}</div>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- INFLOWS SECTION -->
+                            <tr class="section-header inflow-section">
+                                <td colspan="{{ bucket_columns|length|add:5 }}">Total Inflows</td>
+                            </tr>
+                            
+                            {% for prod_type, agg_data in currency_report.inflow_aggregated.items %}
+                            <tr class="product-type-row inflow-type" data-product-type="{{ prod_type }}" data-flow-type="inflow" data-currency="{{ currency_code }}" ondblclick="toggleProductType('{{ prod_type }}', 'inflow', '{{ currency_code }}')">
+                                <td>
+                                    <span class="expand-icon">▶</span>
+                                </td>
+                                <td>
+                                    <strong>{{ agg_data.v_prod_type }}</strong>
+                                    <span class="product-count">({{ agg_data.product_count }} products)</span>
+                                </td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount {% if agg_data.bucket_values|lookup:bucket.column_name > 0 %}positive{% elif agg_data.bucket_values|lookup:bucket.column_name < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ agg_data.bucket_values|lookup:bucket.column_name|floatformat:2 }}
+                                </td>
+                                {% endfor %}
+                                <td class="amount {% if agg_data.adjusted_amount > 0 %}positive{% elif agg_data.adjusted_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ agg_data.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if agg_data.total_amount > 0 %}positive{% elif agg_data.total_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ agg_data.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if agg_data.total_after_adjustment > 0 %}positive{% elif agg_data.total_after_adjustment < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ agg_data.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            
+                            {% for prod_name, name_data in agg_data.products_by_name.items %}
+                            <!-- Level 2: Product Name -->
+                            <tr class="product-name-row inflow-name" data-product-type="{{ prod_type }}" data-product-name="{{ prod_name }}" data-flow-type="inflow" data-currency="{{ currency_code }}" 
+                                {% if name_data.has_splits %}ondblclick="toggleProductName('{{ prod_type }}', '{{ prod_name }}', 'inflow', '{{ currency_code }}')"{% endif %}>
+                                <td>
+                                    {% if name_data.has_splits %}
+                                        <span class="expand-icon">▶</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ name_data.v_product_name }}
+                                    {% if name_data.has_splits %}
+                                        <span class="split-count">({{ name_data.split_count }} splits)</span>
+                                    {% else %}
+                                        <span class="split-count">({{ name_data.non_split_products|length }} items)</span>
+                                    {% endif %}
+                                </td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount {% if name_data.bucket_values|lookup:bucket.column_name > 0 %}positive{% elif name_data.bucket_values|lookup:bucket.column_name < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ name_data.bucket_values|lookup:bucket.column_name|floatformat:2 }}
+                                </td>
+                                {% endfor %}
+                                <td class="amount {% if name_data.adjusted_amount > 0 %}positive{% elif name_data.adjusted_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ name_data.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if name_data.total_amount > 0 %}positive{% elif name_data.total_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ name_data.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if name_data.total_after_adjustment > 0 %}positive{% elif name_data.total_after_adjustment < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ name_data.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            
+                            {% if name_data.has_splits %}
+                            <!-- Level 3: Product Splits (hidden by default) -->
+                            {% for split in name_data.splits %}
+                            <tr class="product-split-row inflow-split" data-product-type="{{ prod_type }}" data-product-name="{{ prod_name }}" data-flow-type="inflow" data-currency="{{ currency_code }}">
+                                <td>{{ split.account_types }}</td>
+                                <td>
+                                    {{ split.v_product_splits }}
+                                    {% if split.product_count > 1 %}
+                                        <span class="split-count">({{ split.product_count }} items)</span>
+                                    {% endif %}
+                                </td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount {% if split.bucket_values|lookup:bucket.column_name > 0 %}positive{% elif split.bucket_values|lookup:bucket.column_name < 0 %}negative{% else %}zero{% endif %}">
+                                    {% if split.bucket_values|lookup:bucket.column_name %}
+                                        {{ split.bucket_values|lookup:bucket.column_name|floatformat:2 }}
+                                    {% else %}
+                                        0.00
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="amount {% if split.adjusted_amount > 0 %}positive{% elif split.adjusted_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ split.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if split.total_amount > 0 %}positive{% elif split.total_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ split.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if split.total_after_adjustment > 0 %}positive{% elif split.total_after_adjustment < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ split.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <!-- Level 3: Non-split Products (hidden by default) -->
+                            {% for product in name_data.non_split_products %}
+                            <tr class="product-row inflow-product" data-product-type="{{ prod_type }}" data-product-name="{{ prod_name }}" data-flow-type="inflow" data-currency="{{ currency_code }}">
+                                <td>{{ product.account_type }}</td>
+                                <td>{{ product.v_product_name }}</td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount {% if product.bucket_values|lookup:bucket.column_name > 0 %}positive{% elif product.bucket_values|lookup:bucket.column_name < 0 %}negative{% else %}zero{% endif %}">
+                                    {% if product.bucket_values|lookup:bucket.column_name %}
+                                        {{ product.bucket_values|lookup:bucket.column_name|floatformat:2 }}
+                                    {% else %}
+                                        0.00
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="amount {% if product.adjusted_amount > 0 %}positive{% elif product.adjusted_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ product.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if product.total_amount > 0 %}positive{% elif product.total_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ product.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if product.total_after_adjustment > 0 %}positive{% elif product.total_after_adjustment < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ product.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                            {% endfor %}
+                            {% endfor %}
+                            
+                            <!-- OUTFLOWS SECTION -->
+                            <tr class="section-header outflow-section">
+                                <td colspan="{{ bucket_columns|length|add:5 }}">Total Outflows</td>
+                            </tr>
+                            
+                            {% for prod_type, agg_data in currency_report.outflow_aggregated.items %}
+                            <tr class="product-type-row outflow-type" data-product-type="{{ prod_type }}" data-flow-type="outflow" data-currency="{{ currency_code }}" ondblclick="toggleProductType('{{ prod_type }}', 'outflow', '{{ currency_code }}')">
+                                <td>
+                                    <span class="expand-icon">▶</span>
+                                </td>
+                                <td>
+                                    <strong>{{ agg_data.v_prod_type }}</strong>
+                                    <span class="product-count">({{ agg_data.product_count }} products)</span>
+                                </td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount {% if agg_data.bucket_values|lookup:bucket.column_name > 0 %}positive{% elif agg_data.bucket_values|lookup:bucket.column_name < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ agg_data.bucket_values|lookup:bucket.column_name|floatformat:2 }}
+                                </td>
+                                {% endfor %}
+                                <td class="amount {% if agg_data.adjusted_amount > 0 %}positive{% elif agg_data.adjusted_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ agg_data.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if agg_data.total_amount > 0 %}positive{% elif agg_data.total_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ agg_data.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if agg_data.total_after_adjustment > 0 %}positive{% elif agg_data.total_after_adjustment < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ agg_data.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            
+                            {% for prod_name, name_data in agg_data.products_by_name.items %}
+                            <!-- Level 2: Product Name -->
+                            <tr class="product-name-row outflow-name" data-product-type="{{ prod_type }}" data-product-name="{{ prod_name }}" data-flow-type="outflow" data-currency="{{ currency_code }}" 
+                                {% if name_data.has_splits %}ondblclick="toggleProductName('{{ prod_type }}', '{{ prod_name }}', 'outflow', '{{ currency_code }}')"{% endif %}>
+                                <td>
+                                    {% if name_data.has_splits %}
+                                        <span class="expand-icon">▶</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ name_data.v_product_name }}
+                                    {% if name_data.has_splits %}
+                                        <span class="split-count">({{ name_data.split_count }} splits)</span>
+                                    {% else %}
+                                        <span class="split-count">({{ name_data.non_split_products|length }} items)</span>
+                                    {% endif %}
+                                </td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount {% if name_data.bucket_values|lookup:bucket.column_name > 0 %}positive{% elif name_data.bucket_values|lookup:bucket.column_name < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ name_data.bucket_values|lookup:bucket.column_name|floatformat:2 }}
+                                </td>
+                                {% endfor %}
+                                <td class="amount {% if name_data.adjusted_amount > 0 %}positive{% elif name_data.adjusted_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ name_data.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if name_data.total_amount > 0 %}positive{% elif name_data.total_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ name_data.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if name_data.total_after_adjustment > 0 %}positive{% elif name_data.total_after_adjustment < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ name_data.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            
+                            {% if name_data.has_splits %}
+                            <!-- Level 3: Product Splits (hidden by default) -->
+                            {% for split in name_data.splits %}
+                            <tr class="product-split-row outflow-split" data-product-type="{{ prod_type }}" data-product-name="{{ prod_name }}" data-flow-type="outflow" data-currency="{{ currency_code }}">
+                                <td>{{ split.account_types }}</td>
+                                <td>
+                                    {{ split.v_product_splits }}
+                                    {% if split.product_count > 1 %}
+                                        <span class="split-count">({{ split.product_count }} items)</span>
+                                    {% endif %}
+                                </td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount {% if split.bucket_values|lookup:bucket.column_name > 0 %}positive{% elif split.bucket_values|lookup:bucket.column_name < 0 %}negative{% else %}zero{% endif %}">
+                                    {% if split.bucket_values|lookup:bucket.column_name %}
+                                        {{ split.bucket_values|lookup:bucket.column_name|floatformat:2 }}
+                                    {% else %}
+                                        0.00
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="amount {% if split.adjusted_amount > 0 %}positive{% elif split.adjusted_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ split.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if split.total_amount > 0 %}positive{% elif split.total_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ split.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if split.total_after_adjustment > 0 %}positive{% elif split.total_after_adjustment < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ split.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <!-- Level 3: Non-split Products (hidden by default) -->
+                            {% for product in name_data.non_split_products %}
+                            <tr class="product-row outflow-product" data-product-type="{{ prod_type }}" data-product-name="{{ prod_name }}" data-flow-type="outflow" data-currency="{{ currency_code }}">
+                                <td>{{ product.account_type }}</td>
+                                <td>{{ product.v_product_name }}</td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount {% if product.bucket_values|lookup:bucket.column_name > 0 %}positive{% elif product.bucket_values|lookup:bucket.column_name < 0 %}negative{% else %}zero{% endif %}">
+                                    {% if product.bucket_values|lookup:bucket.column_name %}
+                                        {{ product.bucket_values|lookup:bucket.column_name|floatformat:2 }}
+                                    {% else %}
+                                        0.00
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="amount {% if product.adjusted_amount > 0 %}positive{% elif product.adjusted_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ product.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if product.total_amount > 0 %}positive{% elif product.total_amount < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ product.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount {% if product.total_after_adjustment > 0 %}positive{% elif product.total_after_adjustment < 0 %}negative{% else %}zero{% endif %}">
+                                    {{ product.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                            {% endfor %}
+                            {% endfor %}
+                            
+                            <!-- NET LIQUIDITY GAP -->
+                            <tr class="summary-row net-gap-section" id="netGapRow_{{ currency_code }}">
+                                <td colspan="2">Net Liquidity Gap</td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount net-gap-bucket" data-bucket="{{ bucket.column_name }}" data-currency="{{ currency_code }}">
+                                    {{ currency_report.net_gap|lookup:bucket.column_name|floatformat:2 }}
+                                </td>
+                                {% endfor %}
+                                <td class="amount net-gap-adjusted" data-currency="{{ currency_code }}">
+                                    {{ currency_report.net_gap.adjusted_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount net-gap-total" data-currency="{{ currency_code }}">
+                                    {{ currency_report.net_gap.total_amount|floatformat:2 }}
+                                </td>
+                                <td class="amount net-gap-after-adj" data-currency="{{ currency_code }}">
+                                    {{ currency_report.net_gap.total_after_adjustment|floatformat:2 }}
+                                </td>
+                            </tr>
+                            
+                            <!-- NET GAP % OF TOTAL OUTFLOWS -->
+                            <tr class="summary-row" id="netGapPercentRow_{{ currency_code }}">
+                                <td colspan="2">Net Gap as % of Total Outflows</td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount percentage net-gap-percent-bucket" data-bucket="{{ bucket.column_name }}" data-currency="{{ currency_code }}">
+                                    {{ currency_report.net_gap_percent|lookup:bucket.column_name|floatformat:2 }}%
+                                </td>
+                                {% endfor %}
+                                <td class="amount percentage">-</td>
+                                <td class="amount percentage net-gap-percent-total" data-currency="{{ currency_code }}">
+                                    {{ currency_report.net_gap_percent.total_amount|floatformat:2 }}%
+                                </td>
+                                <td class="amount percentage">-</td>
+                            </tr>
+                            
+                            <!-- CUMULATIVE GAP -->
+                            <tr class="summary-row cumulative-section" id="cumulativeGapRow_{{ currency_code }}">
+                                <td colspan="2">Cumulative Gap</td>
+                                {% for bucket in bucket_columns %}
+                                <td class="amount cumulative-gap-bucket" data-bucket="{{ bucket.column_name }}" data-currency="{{ currency_code }}">
+                                    {{ currency_report.cumulative_gap|lookup:bucket.column_name|floatformat:2 }}
+                                </td>
+                                {% endfor %}
+                                <td class="amount">-</td>
+                                <td class="amount">-</td>
+                                <td class="amount">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div class="report-footer">
+            <p><strong>Legend:</strong></p>
+            <ul>
+                <li><span style="color: #28a745;">Green</span> = Positive values</li>
+                <li><span style="color: #dc3545;">Red</span> = Negative values</li>
+                <li><span style="color: #6c757d;">Grey</span> = Zero values</li>
+                <li><span style="background-color: #e8f5e8;">Light Green</span> = Product type rows (Level 1)</li>
+                <li><span style="background-color: #fff3cd;">Yellow</span> = Product name rows (Level 2)</li>
+                <li><span style="background-color: #f8f9fa;">Light Grey</span> = Product split rows (Level 3)</li>
+                <li><span style="background-color: #e9ecef;">Grey</span> = Summary rows</li>
+            </ul>
+            <p><strong>Calculation Logic:</strong></p>
+            <ul>
+                <li><strong>Total</strong> = Sum of bucket values only (excludes adjusted amount)</li>
+                <li><strong>Total After Adjustment</strong> = Total + Adjusted Amount</li>
+                <li><strong>Adjusted Amount</strong> = Manual adjustments to cash flows</li>
+            </ul>
+        </div>
+    </div>
+    <script>
+        // Drill-down functionality
+        function toggleProductType(productType, flowType, currencyCode) {
+            const typeRow = document.querySelector(`tr[data-product-type="${productType}"][data-flow-type="${flowType}"][data-currency="${currencyCode}"].product-type-row`);
+            const nameRows = document.querySelectorAll(`tr[data-product-type="${productType}"][data-flow-type="${flowType}"][data-currency="${currencyCode}"].product-name-row`);
+            const expandIcon = typeRow.querySelector('.expand-icon');
+            
+            const isExpanded = typeRow.classList.contains('expanded');
+            
+            if (isExpanded) {
+                // Collapse
+                typeRow.classList.remove('expanded');
+                expandIcon.textContent = '▶';
+                expandIcon.classList.remove('expanded');
+                nameRows.forEach(row => {
+                    row.classList.remove('visible');
+                    // Also collapse any expanded product names
+                    const productName = row.dataset.productName;
+                    collapseProductName(productType, productName, flowType, currencyCode);
+                });
+            } else {
+                // Expand
+                typeRow.classList.add('expanded');
+                expandIcon.textContent = '▼';
+                expandIcon.classList.add('expanded');
+                nameRows.forEach(row => {
+                    row.classList.add('visible');
+                });
+            }
+            
+            // Recalculate gaps based on visible data
+            recalculateGaps();
+        }
+
+        function toggleProductName(productType, productName, flowType, currencyCode) {
+            const nameRow = document.querySelector(`tr[data-product-type="${productType}"][data-product-name="${productName}"][data-flow-type="${flowType}"][data-currency="${currencyCode}"].product-name-row`);
+            const splitRows = document.querySelectorAll(`tr[data-product-type="${productType}"][data-product-name="${productName}"][data-flow-type="${flowType}"][data-currency="${currencyCode}"].product-split-row`);
+            const productRows = document.querySelectorAll(`tr[data-product-type="${productType}"][data-product-name="${productName}"][data-flow-type="${flowType}"][data-currency="${currencyCode}"].product-row`);
+            const nameExpandIcon = nameRow.querySelector('.expand-icon');
+            
+            // If no expand icon, this product doesn't have splits, so don't do anything
+            if (!nameExpandIcon) return;
+            
+            const isExpanded = nameRow.classList.contains('expanded');
+            
+            if (isExpanded) {
+                // Collapse
+                nameRow.classList.remove('expanded');
+                nameExpandIcon.textContent = '▶';
+                nameExpandIcon.classList.remove('expanded');
+                splitRows.forEach(row => {
+                    row.classList.remove('visible');
+                });
+                productRows.forEach(row => {
+                    row.classList.remove('visible');
+                });
+            } else {
+                // Expand
+                nameRow.classList.add('expanded');
+                nameExpandIcon.textContent = '▼';
+                nameExpandIcon.classList.add('expanded');
+                splitRows.forEach(row => {
+                    row.classList.add('visible');
+                });
+                productRows.forEach(row => {
+                    row.classList.add('visible');
+                });
+            }
+            
+            // Recalculate gaps based on visible data
+            recalculateGaps();
+        }
+        
+        function collapseProductName(productType, productName, flowType, currencyCode) {
+            const nameRow = document.querySelector(`tr[data-product-type="${productType}"][data-product-name="${productName}"][data-flow-type="${flowType}"][data-currency="${currencyCode}"].product-name-row`);
+            const splitRows = document.querySelectorAll(`tr[data-product-type="${productType}"][data-product-name="${productName}"][data-flow-type="${flowType}"][data-currency="${currencyCode}"].product-split-row`);
+            const productRows = document.querySelectorAll(`tr[data-product-type="${productType}"][data-product-name="${productName}"][data-flow-type="${flowType}"][data-currency="${currencyCode}"].product-row`);
+            const expandIcon = nameRow.querySelector('.expand-icon');
+            
+            if (nameRow.classList.contains('expanded')) {
+                nameRow.classList.remove('expanded');
+                if (expandIcon) {
+                    expandIcon.textContent = '▶';
+                    expandIcon.classList.remove('expanded');
+                }
+                splitRows.forEach(row => {
+                    row.classList.remove('visible');
+                });
+                productRows.forEach(row => {
+                    row.classList.remove('visible');
+                });
+            }
+        }
+        
+        // Update filter button states
+        function updateFilterButtonStates(selectedCurrency) {
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(button => {
+                button.classList.remove('active');
+                if (button.dataset.currency === selectedCurrency) {
+                    button.classList.add('active');
+                }
+            });
+        }
+        
+        // Alternative currency filtering method using template variables
+        function filterCurrencyAlternative(currency) {
+            const currentDate = '{{ fic_mis_date|date:"Y-m-d" }}';
+            const currentProcess = '{{ process_name }}';
+            
+            let newUrl;
+            if (currency === 'all') {
+                newUrl = `/reports/contractual-gap/${currentDate}/${currentProcess}/`;
+            } else {
+                newUrl = `/reports/contractual-gap/${currentDate}/${currentProcess}/${encodeURIComponent(currency)}/`;
+            }
+            
+            console.log('Alternative method - New URL:', newUrl);
+            window.location.href = newUrl;
+        }
+        
+        // Currency filtering functionality
+        function filterCurrency(currency) {
+            const currentUrl = new URL(window.location.href);
+            const pathParts = currentUrl.pathname.split('/').filter(part => part !== ''); // Remove empty parts
+            
+            console.log('Current URL:', currentUrl.href);
+            console.log('Path parts:', pathParts);
+            console.log('Requested currency:', currency);
+            
+            // Add loading state to the clicked button
+            const clickedButton = document.querySelector(`[data-currency="${currency}"]`);
+            if (clickedButton) {
+                clickedButton.classList.add('loading');
+                clickedButton.disabled = true;
+            }
+            
+            // Try the alternative method first (more reliable)
+            try {
+                filterCurrencyAlternative(currency);
+                return;
+            } catch (error) {
+                console.warn('Alternative method failed, trying primary method:', error);
+            }
+            
+            // Find the base URL parts: ['reports', 'contractual-gap', 'date', 'process']
+            // Current URL structure: /reports/contractual-gap/2024-01-01/process_name/ or /reports/contractual-gap/2024-01-01/process_name/currency/
+            
+            let baseUrl = '';
+            if (pathParts.length >= 4 && pathParts[0] === 'reports' && pathParts[1] === 'contractual-gap') {
+                // Extract base parts: reports, contractual-gap, date, process
+                const baseParts = pathParts.slice(0, 4); // ['reports', 'contractual-gap', 'date', 'process']
+                baseUrl = '/' + baseParts.join('/') + '/';
+            } else {
+                console.error('Invalid URL structure. Expected: /reports/contractual-gap/date/process/[currency/]');
+                console.error('Got path parts:', pathParts);
+                
+                // Remove loading state on error
+                if (clickedButton) {
+                    clickedButton.classList.remove('loading');
+                    clickedButton.disabled = false;
+                }
+                
+                alert('Error: Invalid URL structure. Please refresh the page and try again.');
+                return;
+            }
+            
+            console.log('Base URL:', baseUrl);
+            
+            // Build new URL based on currency selection
+            let newUrl;
+            if (currency === 'all') {
+                // For "all currencies", use the base URL without currency parameter
+                newUrl = baseUrl;
+            } else {
+                // For specific currency, append currency to base URL
+                newUrl = baseUrl.replace(/\/$/, '') + '/' + encodeURIComponent(currency) + '/';
+            }
+            
+            console.log('New URL:', newUrl);
+            
+            // Add a small delay to show loading state, then navigate
+            setTimeout(() => {
+                window.location.href = newUrl;
+            }, 100);
+        }
+        
+        // Show/hide currency sections based on selection
+        function toggleCurrencyVisibility() {
+            const selectedCurrency = '{{ selected_currency }}';
+            const showAll = '{{ show_all_currencies }}' === 'True';
+            
+            document.querySelectorAll('.currency-section').forEach(section => {
+                const currencyCode = section.dataset.currency;
+                if (showAll || currencyCode === selectedCurrency) {
+                    section.style.display = 'block';
+                } else {
+                    section.style.display = 'none';
+                }
+            });
+        }
+        
+        function expandAllProductTypes() {
+            const typeRows = document.querySelectorAll('.product-type-row');
+            typeRows.forEach(row => {
+                const productType = row.dataset.productType;
+                const flowType = row.dataset.flowType;
+                const currencyCode = row.dataset.currency;
+                if (!row.classList.contains('expanded')) {
+                    toggleProductType(productType, flowType, currencyCode);
+                }
+            });
+        }
+        
+        function expandAllLevels() {
+            // First expand all product types
+            expandAllProductTypes();
+            
+            // Then expand all product names that have splits
+            setTimeout(() => {
+                const nameRows = document.querySelectorAll('.product-name-row.visible');
+                nameRows.forEach(row => {
+                    const expandIcon = row.querySelector('.expand-icon');
+                    if (expandIcon && !row.classList.contains('expanded')) {
+                        const productType = row.dataset.productType;
+                        const productName = row.dataset.productName;
+                        const flowType = row.dataset.flowType;
+                        const currencyCode = row.dataset.currency;
+                        toggleProductName(productType, productName, flowType, currencyCode);
+                    }
+                });
+            }, 100);
+        }
+        
+        function collapseAllLevels() {
+            const typeRows = document.querySelectorAll('.product-type-row');
+            typeRows.forEach(row => {
+                const productType = row.dataset.productType;
+                const flowType = row.dataset.flowType;
+                const currencyCode = row.dataset.currency;
+                if (row.classList.contains('expanded')) {
+                    toggleProductType(productType, flowType, currencyCode);
+                }
+            });
+        }
+        
+        function recalculateGaps() {
+            // Recalculate gaps for each visible currency
+            const visibleCurrencies = document.querySelectorAll('.currency-section:not([style*="display: none"])');
+            
+            visibleCurrencies.forEach(currencySection => {
+                const currencyCode = currencySection.dataset.currency;
+                
+                // Get all visible rows for calculation - only count the most granular level
+                const visibleInflowRows = currencySection.querySelectorAll(`
+                    .product-type-row.inflow-type:not(.expanded),
+                    .product-name-row.inflow-name.visible:not(.expanded),
+                    .product-split-row.inflow-split.visible,
+                    .product-row.inflow-product.visible
+                `);
+                
+                const visibleOutflowRows = currencySection.querySelectorAll(`
+                    .product-type-row.outflow-type:not(.expanded),
+                    .product-name-row.outflow-name.visible:not(.expanded),
+                    .product-split-row.outflow-split.visible,
+                    .product-row.outflow-product.visible
+                `);
+                
+                // Get bucket columns
+                const bucketColumns = [
+                    {% for bucket in bucket_columns %}
+                    '{{ bucket.column_name }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ];
+                
+                // Calculate totals for visible rows
+                let inflowTotals = {};
+                let outflowTotals = {};
+                
+                // Initialize totals
+                bucketColumns.forEach(bucket => {
+                    inflowTotals[bucket] = 0;
+                    outflowTotals[bucket] = 0;
+                });
+                inflowTotals.adjusted = 0;
+                inflowTotals.total = 0;
+                inflowTotals.totalAfterAdj = 0;
+                outflowTotals.adjusted = 0;
+                outflowTotals.total = 0;
+                outflowTotals.totalAfterAdj = 0;
+                
+                // Sum inflows
+                visibleInflowRows.forEach(row => {
+                    sumRowValues(row, inflowTotals, bucketColumns);
+                });
+                
+                // Sum outflows
+                visibleOutflowRows.forEach(row => {
+                    sumRowValues(row, outflowTotals, bucketColumns);
+                });
+                
+                // Update net gap calculations for this currency
+                bucketColumns.forEach(bucket => {
+                    const netGap = inflowTotals[bucket] - outflowTotals[bucket];
+                    const netGapCell = currencySection.querySelector(`.net-gap-bucket[data-bucket="${bucket}"][data-currency="${currencyCode}"]`);
+                    if (netGapCell) {
+                        netGapCell.textContent = formatMoney(netGap);
+                        updateCellColor(netGapCell, netGap);
+                    }
+                    
+                    // Calculate percentage
+                    const percentage = outflowTotals[bucket] !== 0 ? (netGap / outflowTotals[bucket]) * 100 : 0;
+                    const percentCell = currencySection.querySelector(`.net-gap-percent-bucket[data-bucket="${bucket}"][data-currency="${currencyCode}"]`);
+                    if (percentCell) {
+                        percentCell.textContent = formatPercentage(percentage);
+                        updateCellColor(percentCell, percentage);
+                    }
+                });
+                
+                // Update total columns for this currency
+                const netGapAdjusted = inflowTotals.adjusted - outflowTotals.adjusted;
+                const netGapTotal = inflowTotals.total - outflowTotals.total;
+                const netGapAfterAdj = inflowTotals.totalAfterAdj - outflowTotals.totalAfterAdj;
+                
+                const adjustedCell = currencySection.querySelector(`.net-gap-adjusted[data-currency="${currencyCode}"]`);
+                const totalCell = currencySection.querySelector(`.net-gap-total[data-currency="${currencyCode}"]`);
+                const afterAdjCell = currencySection.querySelector(`.net-gap-after-adj[data-currency="${currencyCode}"]`);
+                
+                if (adjustedCell) {
+                    adjustedCell.textContent = formatMoney(netGapAdjusted);
+                    updateCellColor(adjustedCell, netGapAdjusted);
+                }
+                if (totalCell) {
+                    totalCell.textContent = formatMoney(netGapTotal);
+                    updateCellColor(totalCell, netGapTotal);
+                }
+                if (afterAdjCell) {
+                    afterAdjCell.textContent = formatMoney(netGapAfterAdj);
+                    updateCellColor(afterAdjCell, netGapAfterAdj);
+                }
+                
+                // Update percentage for total
+                const totalPercentage = outflowTotals.total !== 0 ? (netGapTotal / outflowTotals.total) * 100 : 0;
+                const totalPercentCell = currencySection.querySelector(`.net-gap-percent-total[data-currency="${currencyCode}"]`);
+                if (totalPercentCell) {
+                    totalPercentCell.textContent = formatPercentage(totalPercentage);
+                    updateCellColor(totalPercentCell, totalPercentage);
+                }
+                
+                // Update cumulative gap for this currency
+                let runningTotal = 0;
+                bucketColumns.forEach(bucket => {
+                    const netGap = inflowTotals[bucket] - outflowTotals[bucket];
+                    runningTotal += netGap;
+                    const cumulativeCell = currencySection.querySelector(`.cumulative-gap-bucket[data-bucket="${bucket}"][data-currency="${currencyCode}"]`);
+                    if (cumulativeCell) {
+                        cumulativeCell.textContent = formatMoney(runningTotal);
+                        updateCellColor(cumulativeCell, runningTotal);
+                    }
+                });
+            });
+        }
+        
+        function sumRowValues(row, totals, bucketColumns) {
+            const cells = row.querySelectorAll('td');
+            
+            // Sum bucket values (starting from index 2, skipping account type and product name)
+            bucketColumns.forEach((bucket, index) => {
+                const cellIndex = index + 2; // Skip first two columns
+                if (cells[cellIndex]) {
+                    const rawValue = cells[cellIndex].textContent.replace(/,/g, '').replace(/[^\d.-]/g, '');
+                    const value = parseFloat(rawValue) || 0;
+                    totals[bucket] += value;
+                }
+            });
+            
+            // Sum adjusted, total, and total after adjustment
+            const adjustedIndex = bucketColumns.length + 2;
+            const totalIndex = bucketColumns.length + 3;
+            const totalAfterAdjIndex = bucketColumns.length + 4;
+            
+            if (cells[adjustedIndex]) {
+                const rawValue = cells[adjustedIndex].textContent.replace(/,/g, '').replace(/[^\d.-]/g, '');
+                totals.adjusted += parseFloat(rawValue) || 0;
+            }
+            if (cells[totalIndex]) {
+                const rawValue = cells[totalIndex].textContent.replace(/,/g, '').replace(/[^\d.-]/g, '');
+                totals.total += parseFloat(rawValue) || 0;
+            }
+            if (cells[totalAfterAdjIndex]) {
+                const rawValue = cells[totalAfterAdjIndex].textContent.replace(/,/g, '').replace(/[^\d.-]/g, '');
+                totals.totalAfterAdj += parseFloat(rawValue) || 0;
+            }
+        }
+        
+        function updateCellColor(cell, value) {
+            cell.classList.remove('positive', 'negative', 'zero');
+            if (value > 0) {
+                cell.classList.add('positive');
+            } else if (value < 0) {
+                cell.classList.add('negative');
+            } else {
+                cell.classList.add('zero');
+            }
+        }
+        
+        // Number formatting functions
+        function formatMoney(amount, currency = '') {
+            if (amount === null || amount === undefined || amount === '') {
+                return '0.00';
+            }
+            
+            const num = parseFloat(amount);
+            if (isNaN(num)) {
+                return '0.00';
+            }
+            
+            // Format with commas and 2 decimal places
+            const formatted = num.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            
+            return currency ? `${currency} ${formatted}` : formatted;
+        }
+        
+        function formatPercentage(value) {
+            if (value === null || value === undefined || value === '') {
+                return '0.00%';
+            }
+            
+            const num = parseFloat(value);
+            if (isNaN(num)) {
+                return '0.00%';
+            }
+            
+            return num.toFixed(2) + '%';
+        }
+        
+        function applyCellColor(cell, value) {
+            const num = parseFloat(value);
+            cell.classList.remove('positive', 'negative', 'zero');
+            
+            if (num > 0) {
+                cell.classList.add('positive');
+            } else if (num < 0) {
+                cell.classList.add('negative');
+            } else {
+                cell.classList.add('zero');
+            }
+        }
+        
+        function formatAllAmounts() {
+            // Format all amount cells
+            document.querySelectorAll('.amount:not(.percentage)').forEach(cell => {
+                if (cell.textContent && cell.textContent.trim() !== '-') {
+                    const originalValue = cell.textContent.trim();
+                    const formattedValue = formatMoney(originalValue);
+                    cell.textContent = formattedValue;
+                    applyCellColor(cell, originalValue);
+                }
+            });
+            
+            // Format percentage cells
+            document.querySelectorAll('.amount.percentage').forEach(cell => {
+                if (cell.textContent && cell.textContent.trim() !== '-') {
+                    const originalValue = cell.textContent.replace('%', '').trim();
+                    const formattedValue = formatPercentage(originalValue);
+                    cell.textContent = formattedValue;
+                    applyCellColor(cell, originalValue);
+                }
+            });
+        }
+        
+        // Enhanced export functionality with level options
+        function exportCurrencyData(currencyCode, level, clickedButton) {
+            // Get the button element - either from parameter or event
+            const button = clickedButton || event.target;
+            const originalText = button.innerHTML;
+            
+            console.log('Export started:', { currencyCode, level, button });
+            
+            // Add loading state
+            button.classList.add('downloading');
+            button.innerHTML = '⏳ Exporting...';
+            button.disabled = true;
+            
+            try {
+                console.log('Looking for currency section:', currencyCode);
+                const currencySection = document.querySelector(`.currency-section[data-currency="${currencyCode}"]`);
+                if (!currencySection) {
+                    throw new Error(`Currency section not found for: ${currencyCode}`);
+                }
+                
+                console.log('Found currency section, looking for table...');
+                const table = currencySection.querySelector('.report-table');
+                if (!table) {
+                    throw new Error('Table not found in currency section');
+                }
+                
+                console.log('Found table, processing rows...');
+                const rows = Array.from(table.querySelectorAll('tr'));
+                console.log('Total rows found:', rows.length);
+                
+                const csvData = [];
+                
+                // Process header rows
+                const headerRows = rows.filter(row => row.querySelectorAll('th').length > 0);
+                console.log('Header rows found:', headerRows.length);
+                
+                headerRows.forEach(headerRow => {
+                    const headerCells = Array.from(headerRow.querySelectorAll('th'));
+                    const headerData = headerCells.map(cell => cleanCellText(cell.textContent));
+                    csvData.push(headerData);
+                });
+                
+                // Process data rows
+                const dataRows = rows.filter(row => row.querySelectorAll('td').length > 0);
+                console.log('Data rows found:', dataRows.length);
+                
+                let includedRows = 0;
+                dataRows.forEach(row => {
+                    if (shouldIncludeRow(row, level, currencyCode)) {
+                        const cells = Array.from(row.querySelectorAll('td'));
+                        const rowData = cells.map(cell => cleanCellText(cell.textContent));
+                        csvData.push(rowData);
+                        includedRows++;
+                    }
+                });
+                
+                console.log('Rows included in export:', includedRows);
+                
+                if (csvData.length === 0) {
+                    throw new Error('No data to export');
+                }
+                
+                // Create CSV content
+                const csvContent = csvData.map(row => 
+                    row.map(cell => {
+                        // Clean and escape the cell content
+                        const cleaned = String(cell || '').trim();
+                        const escaped = cleaned.replace(/"/g, '""');
+                        return escaped.includes(',') || escaped.includes('"') || escaped.includes('\n') ? `"${escaped}"` : escaped;
+                    }).join(',')
+                ).join('\n');
+                
+                console.log('CSV content length:', csvContent.length);
+                
+                // Generate filename
+                const date = '{{ fic_mis_date|date:"Y-m-d" }}';
+                const process = '{{ process_name|default:"unknown" }}';
+                const levelName = level.replace('_', '-');
+                const filename = `contractual-gap-${currencyCode}-${levelName}-${date}-${process}.csv`;
+                
+                console.log('Generated filename:', filename);
+                
+                // Download file
+                downloadCSV(csvContent, filename);
+                
+                // Show success message
+                setTimeout(() => {
+                    button.innerHTML = '✅ Downloaded!';
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.classList.remove('downloading');
+                        button.disabled = false;
+                    }, 2000);
+                }, 500);
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                alert(`Export failed: ${error.message}`);
+                button.innerHTML = '❌ Error';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('downloading');
+                    button.disabled = false;
+                }, 2000);
+            }
+        }
+        
+        function shouldIncludeRow(row, level, currencyCode) {
+            // Check if row belongs to the current currency (if specified)
+            const rowCurrency = row.dataset.currency;
+            if (rowCurrency && rowCurrency !== currencyCode) {
+                return false;
+            }
+            
+            // Always include section headers and summary rows
+            if (row.classList.contains('section-header') || 
+                row.classList.contains('summary-row')) {
+                return true;
+            }
+            
+            switch (level) {
+                case 'summary':
+                    // Only summary rows and section headers
+                    return row.classList.contains('section-header') || 
+                           row.classList.contains('summary-row');
+                
+                case 'product_type':
+                    // Product type rows only (aggregated level)
+                    return row.classList.contains('section-header') || 
+                           row.classList.contains('summary-row') ||
+                           row.classList.contains('product-type-row');
+                
+                case 'product_name':
+                    // Product type and product name rows
+                    return row.classList.contains('section-header') || 
+                           row.classList.contains('summary-row') ||
+                           row.classList.contains('product-type-row') ||
+                           row.classList.contains('product-name-row');
+                
+                case 'splits':
+                    // All rows including splits and individual products
+                    return row.classList.contains('section-header') || 
+                           row.classList.contains('summary-row') ||
+                           row.classList.contains('product-type-row') ||
+                           row.classList.contains('product-name-row') ||
+                           row.classList.contains('product-split-row') ||
+                           row.classList.contains('product-row');
+                
+                default:
+                    return true; // Include all rows if level is not recognized
+            }
+        }
+        
+        function cleanCellText(text) {
+            if (!text) return '';
+            return String(text).replace(/\s+/g, ' ').trim();
+        }
+        
+        function downloadCSV(content, filename) {
+            try {
+                console.log('Creating blob for download...');
+                const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+                
+                // Check if the browser supports the download attribute
+                const link = document.createElement('a');
+                if (typeof link.download !== 'undefined') {
+                    console.log('Using modern download method...');
+                    const url = URL.createObjectURL(blob);
+                    link.href = url;
+                    link.download = filename;
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    console.log('Download initiated successfully');
+                } else {
+                    console.log('Using fallback download method...');
+                    // Fallback for older browsers
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const link = document.createElement('a');
+                        link.href = e.target.result;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                throw new Error('Failed to download file: ' + error.message);
+            }
+        }
+        
+        // Horizontal scrolling enhancements
+        function initializeTableScrolling() {
+            const tableWrappers = document.querySelectorAll('.table-wrapper');
+            
+            tableWrappers.forEach(wrapper => {
+                const tables = wrapper.querySelectorAll('.table-container');
+                
+                tables.forEach(tableContainer => {
+                    const table = tableContainer.querySelector('table');
+                    const scrollIndicator = tableContainer.querySelector('.scroll-indicator');
+                    
+                    if (table && scrollIndicator) {
+                        // Check if table overflows
+                        function checkOverflow() {
+                            const hasOverflow = table.scrollWidth > tableContainer.clientWidth;
+                            
+                            if (hasOverflow) {
+                                tableContainer.classList.add('has-overflow');
+                                wrapper.classList.add('has-overflow');
+                            } else {
+                                tableContainer.classList.remove('has-overflow');
+                                wrapper.classList.remove('has-overflow');
+                            }
+                        }
+                        
+                        // Add scroll event listener
+                        tableContainer.addEventListener('scroll', function() {
+                            const scrollLeft = this.scrollLeft;
+                            const maxScroll = this.scrollWidth - this.clientWidth;
+                            const scrollPercentage = (scrollLeft / maxScroll) * 100;
+                            
+                            // Update scroll indicator text based on position
+                            if (scrollPercentage < 10) {
+                                scrollIndicator.textContent = '← Scroll to see more columns →';
+                            } else if (scrollPercentage > 90) {
+                                scrollIndicator.textContent = '← Scroll back to see previous columns';
+                            } else {
+                                scrollIndicator.textContent = `← Scrolled ${Math.round(scrollPercentage)}% →`;
+                            }
+                            
+                            // Add visual feedback for scroll position
+                            if (scrollPercentage > 5) {
+                                scrollIndicator.style.background = 'rgba(0,123,255,0.8)';
+                            } else {
+                                scrollIndicator.style.background = 'rgba(0,0,0,0.7)';
+                            }
+                        });
+                        
+                        // Initial check
+                        checkOverflow();
+                        
+                        // Recheck on window resize
+                        window.addEventListener('resize', checkOverflow);
+                    }
+                });
+            });
+        }
+        
+        // Add smooth scrolling for better UX
+        function addSmoothScrolling() {
+            const tableContainers = document.querySelectorAll('.table-container');
+            
+            tableContainers.forEach(container => {
+                container.style.scrollBehavior = 'smooth';
+                
+                // Add keyboard navigation
+                container.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowLeft') {
+                        this.scrollLeft -= 100;
+                        e.preventDefault();
+                    } else if (e.key === 'ArrowRight') {
+                        this.scrollLeft += 100;
+                        e.preventDefault();
+                    }
+                });
+                
+                // Make container focusable for keyboard navigation
+                container.setAttribute('tabindex', '0');
+            });
+        }
+        
+        // Add scroll buttons for better navigation
+        function addScrollButtons() {
+            const tableContainers = document.querySelectorAll('.table-container');
+            
+            tableContainers.forEach(container => {
+                const scrollLeftBtn = document.createElement('button');
+                const scrollRightBtn = document.createElement('button');
+                
+                scrollLeftBtn.innerHTML = '◀';
+                scrollRightBtn.innerHTML = '▶';
+                
+                scrollLeftBtn.className = 'scroll-btn scroll-btn-left';
+                scrollRightBtn.className = 'scroll-btn scroll-btn-right';
+                
+                scrollLeftBtn.onclick = () => container.scrollLeft -= 200;
+                scrollRightBtn.onclick = () => container.scrollLeft += 200;
+                
+                container.appendChild(scrollLeftBtn);
+                container.appendChild(scrollRightBtn);
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Apply money formatting to all amounts
+            formatAllAmounts();
+            
+            // Initial gap calculation
+            recalculateGaps();
+            
+            // Set up currency visibility
+            toggleCurrencyVisibility();
+            
+            // Initialize horizontal scrolling enhancements
+            initializeTableScrolling();
+            addSmoothScrolling();
+            addScrollButtons();
+        });
+    </script>
+
+
+{{ block.super }}
+{% endblock %} 

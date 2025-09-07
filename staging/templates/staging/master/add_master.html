@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+    }
+    .form-control.empty-field {
+        background-color: #f8f9fa;
+    }
+    .required-field::after {
+        content: " *";
+        color: red;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{{ title }}</h2>
+                <a href="{% url 'staging:view_master' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="row mb-4">
+        <div class="col">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Add Form -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" class="row g-3" id="productForm" novalidate>
+                {% csrf_token %}
+                
+                <div class="col-md-6">
+                    <label for="v_prod_code" class="form-label required-field">Product Code</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_code" 
+                           name="v_prod_code" 
+                           required>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="fic_mis_date" class="form-label required-field">FIC MIS Date</label>
+                    <input type="date" 
+                           class="form-control date-field" 
+                           id="fic_mis_date" 
+                           name="fic_mis_date" 
+                           required>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_prod_name" class="form-label">Product Name</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_name" 
+                           name="v_prod_name">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_prod_type" class="form-label">Product Type</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_type" 
+                           name="v_prod_type">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_prod_group_desc" class="form-label">Group Description</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_group_desc" 
+                           name="v_prod_group_desc">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="f_prod_rate_sensitivity" class="form-label">Rate Sensitivity</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="f_prod_rate_sensitivity" 
+                           name="f_prod_rate_sensitivity" 
+                           maxlength="1">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_common_coa_code" class="form-label">Common COA Code</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_common_coa_code" 
+                           name="v_common_coa_code">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_balance_sheet_category" class="form-label">Balance Sheet Category</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_balance_sheet_category" 
+                           name="v_balance_sheet_category">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_balance_sheet_category_desc" class="form-label">Balance Sheet Category Description</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_balance_sheet_category_desc" 
+                           name="v_balance_sheet_category_desc">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_prod_type_desc" class="form-label">Product Type Description</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_type_desc" 
+                           name="v_prod_type_desc">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_load_type" class="form-label">Load Type</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_load_type" 
+                           name="v_load_type">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_lob_code" class="form-label">LOB Code</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_lob_code" 
+                           name="v_lob_code">
+                </div>
+
+                <div class="col-12">
+                    <label for="v_prod_desc" class="form-label">Product Description</label>
+                    <textarea class="form-control" 
+                              id="v_prod_desc" 
+                              name="v_prod_desc" 
+                              rows="3"></textarea>
+                </div>
+
+                <div class="col-12">
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'staging:view_master' %}" class="btn btn-outline-secondary px-4">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn px-4" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('productForm');
+        
+        // Function to handle empty fields
+        function handleEmptyField(field) {
+            if (!field.value.trim()) {
+                field.classList.add('empty-field');
+                // For date fields, ensure the value is completely empty
+                if (field.type === 'date') {
+                    field.value = '';
+                }
+            } else {
+                field.classList.remove('empty-field');
+            }
+        }
+
+        // Initialize all fields
+        document.querySelectorAll('.form-control').forEach(handleEmptyField);
+
+        // Handle changes to fields
+        document.querySelectorAll('.form-control').forEach(field => {
+            field.addEventListener('change', () => handleEmptyField(field));
+            field.addEventListener('input', () => handleEmptyField(field));
+        });
+
+        // Handle form submission
+        form.addEventListener('submit', function(e) {
+            // Validate required fields
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                return;
+            }
+
+            // Clear any empty date fields
+            document.querySelectorAll('.date-field').forEach(function(dateField) {
+                if (!dateField.value.trim()) {
+                    dateField.value = '';
+                    dateField.removeAttribute('value');
+                }
+            });
+
+            // Clear any empty text fields
+            document.querySelectorAll('input[type="text"], textarea').forEach(function(field) {
+                if (!field.value.trim()) {
+                    field.value = '';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

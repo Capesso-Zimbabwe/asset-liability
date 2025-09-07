@@ -1,0 +1,714 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Capesso ALM{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            margin: 0;
+            background-color: #ffffff;
+        }
+
+        /* Header styles */
+        .header {
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 40; /* Lower z-index to avoid conflicts */
+            height: 64px;
+        }
+
+        /* Content Top Navigation Bar */
+        .content-top-nav {
+            background-color: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            white-space: nowrap;
+            display: none;
+            z-index: 20; /* Lower z-index to avoid conflicts */
+        }
+
+        .content-top-nav.show {
+            display: block;
+        }
+
+        /* Sidebar styles */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 64px;
+            height: calc(100vh - 64px);
+            width: 256px;
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            transform: translateX(-100%);
+            transition: transform 0.2s ease-in-out;
+            overflow-y: auto;
+            z-index: 30; /* Lower z-index to avoid conflicts */
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+
+        @media (min-width: 992px) {
+            .sidebar {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 256px;
+            }
+        }
+
+        /* Sidebar item styles */
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            color: #374151;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: background-color 0.2s ease-in-out;
+            cursor: pointer;
+        }
+
+        .sidebar-item:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #374151;
+            text-decoration: none;
+        }
+
+        .sidebar-item.active {
+            background-color: rgba(37, 99, 235, 0.1);
+            color: #2563eb;
+        }
+
+        .sidebar-item svg {
+            width: 20px;
+            height: 20px;
+            color: #6b7280;
+            margin-right: 12px;
+        }
+
+        .sidebar-item.active svg {
+            color: #2563eb;
+        }
+
+        /* Hide dropdown arrows when item is active */
+        .sidebar-item.active .dropdown-arrow {
+            display: none;
+        }
+
+        /* Main content styles */
+        .main-content {
+            padding-top: 64px;
+            min-height: 100vh;
+            background-color: #f9fafb;
+        }
+
+        /* User menu styles */
+        .user-menu {
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Custom scrollbar styles */
+        .sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Dropdown menu styles */
+        .dropdown-menu {
+            font-size: 12px;
+            z-index: 35; /* Above sidebar but below modals */
+        }
+
+        /* Collapsible menu styles */
+        .collapse-menu {
+            padding-left: 24px;
+        }
+
+        .collapse-submenu {
+            padding-left: 16px;
+        }
+
+        /* Button styles */
+        .btn-toggle {
+            background: none;
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            color: #6b7280;
+        }
+
+        .btn-toggle:hover {
+            background-color: #f3f4f6;
+        }
+
+        /* Navigation link styles */
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .nav-link svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+        }
+
+        /* Content nav specific styles */
+        .content-nav-item {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #374151;
+            text-decoration: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+            border-radius: 6px;
+            margin: 0 4px 8px 0;
+            background-color: white;
+            border: 1px solid #d1d5db;
+        }
+
+        .content-nav-item:hover {
+            color: #2563eb;
+            background-color: rgba(37, 99, 235, 0.1);
+            border-color: #2563eb;
+            text-decoration: none;
+        }
+
+        .content-nav-item.active {
+            color: #2563eb;
+            background-color: rgba(37, 99, 235, 0.1);
+            border-color: #2563eb;
+        }
+
+        .content-nav-item svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+        }
+
+        /* Content nav scrollbar */
+        .content-top-nav::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .content-top-nav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .content-top-nav::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+        }
+
+        /* Dropdown arrow */
+        .dropdown-arrow {
+            margin-left: auto;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 991px) {
+            .sidebar {
+                top: 64px;
+                height: calc(100vh - 64px);
+            }
+            .main-content {
+                padding-top: 64px;
+                margin-left: 0;
+            }
+        }
+
+        /* Add these rules at the end to prevent conflicts with loading functionality */
+        /* These rules only apply when the upload-page class is present */
+        .upload-page .header,
+        .upload-page .sidebar,
+        .upload-page .content-top-nav {
+            display: none;
+        }
+
+        .upload-page .main-content {
+            margin-left: 0;
+            padding-top: 0;
+        }
+
+        /* Ensure modals and toasts from upload pages appear above base elements */
+        .upload-page .modal-backdrop {
+            z-index: 45;
+        }
+
+        .upload-page .modal {
+            z-index: 50;
+        }
+
+        .upload-page .toast-container {
+            z-index: 60;
+        }
+
+        /* Toast notifications */
+        .toast {
+            z-index: 60; /* Above everything */
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+    {% if not request.user.is_authenticated %}
+        {% if request.path != '/login/' %}
+            <script>window.location.href = '/login/';</script>
+        {% else %}
+    {% block layout %}{% endblock %}
+        {% endif %}
+    {% else %}
+        {% if request.path == '/login/' %}
+            <script>window.location.href = '/dashboard/';</script>
+        {% else %}
+            <!-- Header -->
+            <header class="header">
+                <div class="container-fluid h-100">
+                    <div class="row h-100 align-items-center">
+                    <!-- Left side - Logo and Toggle -->
+                        <div class="col-auto d-flex align-items-center">
+                            <button id="sidebar-toggle" class="btn-toggle d-lg-none me-3">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            </svg>
+                        </button>
+                            <div class="d-flex align-items-center">
+                                <img src="{% static 'images/icon.webp' %}" alt="ALM Logo" class="rounded-circle" style="width: 32px; height: 32px;">
+                                <span class="ms-2 fs-5 fw-semibold text-dark">Asset Liability Management</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Right side - User menu and options -->
+                        <div class="col d-flex justify-content-end align-items-center">
+                        <!-- API Documentation -->
+                            <a href="/api/docs" class="nav-link me-2">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            API
+                        </a>
+
+                        <!-- Settings -->
+                            <a href="/settings" class="nav-link me-2">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Settings
+                        </a>
+
+                        <!-- User Profile -->
+                            <div class="dropdown user-menu">
+                                <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                                    <div class="user-avatar me-2">
+                                        <span class="text-muted fw-semibold">
+                                        {% if user.first_name %}{{ user.first_name.0 }}{% else %}{{ user.username.0|upper }}{% endif %}
+                                    </span>
+                                </div>
+                                    <span class="small fw-medium text-dark">
+                                    {% if user.first_name %}{{ user.first_name }}{% else %}{{ user.username }}{% endif %}
+                                </span>
+                            </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="/admin/">Admin Panel</a></li>
+                                    <li><a class="dropdown-item text-danger" href="{% url 'alm_app:logout' %}">Logout</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Sidebar -->
+            <aside id="sidebar" class="sidebar">
+                <nav class="p-3">
+                    <!-- Dashboard -->
+                    <div class="sidebar-item" data-nav-type="single" data-url="{% url 'alm_app:dashboard' %}" data-title="Dashboard">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        <span>Dashboard</span>
+                    </div>
+
+                    <!-- Execution -->
+                    <div class="sidebar-item" data-nav-type="single" data-url="{% url 'alm_app:execute_view' %}" data-title="Execution">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Execution</span>
+                    </div>
+
+                    <!-- Time Buckets -->
+                    <div class="sidebar-item" data-nav-type="single" data-url="{% url 'alm_app:time_bucket_list' %}" data-title="Time Buckets">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Time Buckets</span>
+                    </div>
+
+                    <!-- Behavioural Patterns -->
+                    <div class="sidebar-item" data-nav-type="single" data-url="{% url 'alm_app:pattern-list' %}" data-title="Behavioural Patterns">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Behavioural Patterns</span>
+                    </div>
+
+                    <!-- Reports -->
+                    <div class="sidebar-item" data-nav-type="dropdown" data-title="Reports">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        <span>Reports</span>
+                        <svg class="dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        <div class="dropdown-options" style="display: none;">
+                            <div data-url="{% url 'alm_app:contractual_gap_report_form' %}" data-title="Contractual Gap Base"></div>
+                            <div data-url="{% url 'alm_app:adjustments_form' %}" data-title="Contractual Adjustments"></div>
+                            <div data-url="{% url 'alm_app:Contractual_Cons_gap_report_form_cons' %}" data-title="Contractual Gap Cons"></div>
+                            <div data-url="{% url 'alm_app:behavioural_gap_report_form_cons' %}" data-title="Behavioural Gap"></div>
+                            <div data-url="{% url 'alm_app:rate_sensitive_gap_report_form_cons' %}" data-title="Rate Sensitive Gap"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Management -->
+                    <div class="sidebar-item" data-nav-type="dropdown" data-title="Data Management">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                            </svg>
+                        <span>Data Management</span>
+                        <svg class="dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        <div class="dropdown-options" style="display: none;">
+                            <div data-url="{% url 'staging:load_loans' %}" data-title="Upload Loan Contracts"></div>
+                            <div data-url="{% url 'staging:load_overdraft' %}" data-title="Upload Overdrafts"></div>
+                            <div data-url="{% url 'staging:load_schedule' %}" data-title="Upload Schedules"></div>
+                            <div data-url="{% url 'staging:load_investment' %}" data-title="Upload Investments"></div>
+                            <div data-url="{% url 'staging:load_firstday' %}" data-title="Upload First Day"></div>
+                            <div data-url="{% url 'staging:load_creditline' %}" data-title="Upload Credit Lines"></div>
+                            <div data-url="{% url 'staging:upload_coa' %}" data-title="Upload Coa"></div>
+                            <div data-url="{% url 'staging:upload_master' %}" data-title="Upload Product Master"></div>
+                            <div data-url="{% url 'staging:load_loans' %}" data-title="Upload Product Balances"></div>
+                        </div>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <div class="container-fluid p-4">
+                    <!-- Dynamic Content Navigation Bar (inside body) -->
+                    <nav id="content-top-nav" class="content-top-nav">
+                        <!-- Dynamic content will be populated here by JavaScript -->
+                    </nav>
+                    
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+
+            <!-- JavaScript -->
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const sidebar = document.getElementById('sidebar');
+                    const sidebarToggle = document.getElementById('sidebar-toggle');
+                    const contentTopNav = document.getElementById('content-top-nav');
+                    const sidebarItems = document.querySelectorAll('.sidebar-item');
+
+                    // Store current navigation state
+                    let currentNavState = {
+                        type: null,
+                        title: null,
+                        options: null
+                    };
+
+                    // Sidebar toggle functionality
+                    sidebarToggle.addEventListener('click', function() {
+                        sidebar.classList.toggle('show');
+                    });
+
+                    // Handle sidebar item clicks
+                    sidebarItems.forEach(item => {
+                        item.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            
+                            // Remove active class from all items
+                            sidebarItems.forEach(i => i.classList.remove('active'));
+                            
+                            // Add active class to clicked item
+                            this.classList.add('active');
+                            
+                            const navType = this.dataset.navType;
+                            const title = this.dataset.title;
+                            
+                            if (navType === 'single') {
+                                // For single items, save state and navigate
+                                const url = this.dataset.url;
+                                saveNavigationState('single', title, null, url);
+                                showSingleItemInContentNav(title, url);
+                                // Navigate to the URL
+                                window.location.href = url;
+                            } else if (navType === 'dropdown') {
+                                // For dropdown items, save state and navigate
+                                const options = this.querySelectorAll('.dropdown-options > div');
+                                const optionsData = Array.from(options).map(opt => ({
+                                    url: opt.dataset.url,
+                                    title: opt.dataset.title
+                                }));
+                                
+                                saveNavigationState('dropdown', title, optionsData);
+                                showDropdownOptionsInContentNav(title, options);
+                                
+                                // Navigate to the first option if available
+                                if (options.length > 0) {
+                                    const firstOptionUrl = options[0].dataset.url;
+                                    if (firstOptionUrl && firstOptionUrl !== '#') {
+                                        window.location.href = firstOptionUrl;
+                                    }
+                                }
+                            }
+                        });
+                    });
+
+                    // Save navigation state to localStorage
+                    function saveNavigationState(type, title, options, url = null) {
+                        const state = {
+                            type: type,
+                            title: title,
+                            options: options,
+                            url: url,
+                            timestamp: Date.now()
+                        };
+                        localStorage.setItem('navigationState', JSON.stringify(state));
+                    }
+
+                    // Load navigation state from localStorage
+                    function loadNavigationState() {
+                        const savedState = localStorage.getItem('navigationState');
+                        if (savedState) {
+                            try {
+                                return JSON.parse(savedState);
+                            } catch (e) {
+                                console.error('Error parsing navigation state:', e);
+                                return null;
+                            }
+                        }
+                        return null;
+                    }
+
+                    function showSingleItemInContentNav(title, url) {
+                        // Store current state
+                        currentNavState = {
+                            type: 'single',
+                            title: title,
+                            url: url
+                        };
+
+                        contentTopNav.innerHTML = `
+                            <a href="${url}" class="content-nav-item active">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                </svg>
+                                ${title}
+                            </a>
+                        `;
+                        contentTopNav.classList.add('show');
+                        
+                        // Add click handler to maintain navigation
+                        addContentNavClickHandlers();
+                    }
+
+                    function showDropdownOptionsInContentNav(parentTitle, options) {
+                        // Store current state
+                        currentNavState = {
+                            type: 'dropdown',
+                            title: parentTitle,
+                            options: Array.from(options).map(opt => ({
+                                url: opt.dataset.url,
+                                title: opt.dataset.title
+                            }))
+                        };
+
+                        let contentNavContent = '';
+                        let isFirst = true;
+                        
+                        options.forEach(option => {
+                            const url = option.dataset.url;
+                            const title = option.dataset.title;
+                            const activeClass = isFirst ? ' active' : '';
+                            contentNavContent += `
+                                <a href="${url}" class="content-nav-item${activeClass}">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    ${title}
+                                </a>
+                            `;
+                            isFirst = false;
+                        });
+                        
+                        contentTopNav.innerHTML = contentNavContent;
+                        contentTopNav.classList.add('show');
+                        
+                        // Add click handlers to maintain navigation
+                        addContentNavClickHandlers();
+                    }
+
+                    // Restore navigation state from saved options data
+                    function showDropdownOptionsFromState(parentTitle, optionsData) {
+                        let contentNavContent = '';
+                        let isFirst = true;
+                        
+                        optionsData.forEach(option => {
+                            const url = option.url;
+                            const title = option.title;
+                            const activeClass = isFirst ? ' active' : '';
+                            contentNavContent += `
+                                <a href="${url}" class="content-nav-item${activeClass}">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    ${title}
+                                </a>
+                            `;
+                            isFirst = false;
+                        });
+                        
+                        contentTopNav.innerHTML = contentNavContent;
+                        contentTopNav.classList.add('show');
+                        
+                        // Add click handlers to maintain navigation
+                        addContentNavClickHandlers();
+                    }
+
+                    function addContentNavClickHandlers() {
+                        const contentNavItems = contentTopNav.querySelectorAll('.content-nav-item');
+                        contentNavItems.forEach(item => {
+                            item.addEventListener('click', function(e) {
+                                // Remove active class from all content nav items
+                                contentNavItems.forEach(navItem => navItem.classList.remove('active'));
+                                // Add active class to clicked item
+                                this.classList.add('active');
+                                
+                                // Don't prevent default - let the navigation happen
+                                // The top nav will persist because we're restoring it on page load
+                            });
+                        });
+                    }
+
+                    // Function to restore navigation state on page load
+                    function restoreNavigationState() {
+                        const savedState = loadNavigationState();
+                        if (savedState) {
+                            // Check if the saved state is not too old (optional - remove if not needed)
+                            const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+                            if (Date.now() - savedState.timestamp < maxAge) {
+                                if (savedState.type === 'single') {
+                                    showSingleItemInContentNav(savedState.title, savedState.url);
+                                } else if (savedState.type === 'dropdown' && savedState.options) {
+                                    showDropdownOptionsFromState(savedState.title, savedState.options);
+                                }
+                                
+                                // Set active state on corresponding sidebar item
+                                sidebarItems.forEach(item => {
+                                    if (item.dataset.title === savedState.title) {
+                                        item.classList.add('active');
+                                    } else {
+                                        item.classList.remove('active');
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    // Close sidebar when clicking outside on mobile
+                    document.addEventListener('click', function(e) {
+                        if (window.innerWidth < 992) {
+                            if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                                sidebar.classList.remove('show');
+                            }
+                        }
+                    });
+
+                    // Handle window resize
+                    window.addEventListener('resize', function() {
+                        if (window.innerWidth >= 992) {
+                            sidebar.classList.remove('show');
+                        }
+                    });
+
+                    // Initialize navigation state on page load
+                    restoreNavigationState();
+                });
+            </script>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

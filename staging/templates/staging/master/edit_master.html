@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">{{ title }}</h2>
+                <a href="{% url 'staging:view_master' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="row mb-4">
+        <div class="col">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Edit Form -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                
+                <div class="col-md-6">
+                    <label for="v_prod_code" class="form-label">Product Code *</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_code" 
+                           name="v_prod_code" 
+                           value="{{ product.v_prod_code }}"
+                           required>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="fic_mis_date" class="form-label">FIC MIS Date *</label>
+                    <input type="date" 
+                           class="form-control" 
+                           id="fic_mis_date" 
+                           name="fic_mis_date" 
+                           value="{{ product.fic_mis_date|date:'Y-m-d' }}"
+                           required>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_prod_name" class="form-label">Product Name</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_name" 
+                           name="v_prod_name" 
+                           value="{{ product.v_prod_name }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_prod_type" class="form-label">Product Type</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_type" 
+                           name="v_prod_type" 
+                           value="{{ product.v_prod_type }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_prod_group_desc" class="form-label">Group Description</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_group_desc" 
+                           name="v_prod_group_desc" 
+                           value="{{ product.v_prod_group_desc }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="f_prod_rate_sensitivity" class="form-label">Rate Sensitivity</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="f_prod_rate_sensitivity" 
+                           name="f_prod_rate_sensitivity" 
+                           value="{{ product.f_prod_rate_sensitivity }}"
+                           maxlength="1">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_common_coa_code" class="form-label">Common COA Code</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_common_coa_code" 
+                           name="v_common_coa_code" 
+                           value="{{ product.v_common_coa_code }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_balance_sheet_category" class="form-label">Balance Sheet Category</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_balance_sheet_category" 
+                           name="v_balance_sheet_category" 
+                           value="{{ product.v_balance_sheet_category }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_balance_sheet_category_desc" class="form-label">Balance Sheet Category Description</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_balance_sheet_category_desc" 
+                           name="v_balance_sheet_category_desc" 
+                           value="{{ product.v_balance_sheet_category_desc }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_prod_type_desc" class="form-label">Product Type Description</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_prod_type_desc" 
+                           name="v_prod_type_desc" 
+                           value="{{ product.v_prod_type_desc }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_load_type" class="form-label">Load Type</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_load_type" 
+                           name="v_load_type" 
+                           value="{{ product.v_load_type }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="v_lob_code" class="form-label">LOB Code</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="v_lob_code" 
+                           name="v_lob_code" 
+                           value="{{ product.v_lob_code }}">
+                </div>
+
+                <div class="col-12">
+                    <label for="v_prod_desc" class="form-label">Product Description</label>
+                    <textarea class="form-control" 
+                              id="v_prod_desc" 
+                              name="v_prod_desc" 
+                              rows="3">{{ product.v_prod_desc }}</textarea>
+                </div>
+
+                <div class="col-12">
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'staging:view_master' %}" class="btn btn-outline-secondary px-4">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn px-4" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

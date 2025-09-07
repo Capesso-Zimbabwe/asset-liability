@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Pipeline Execution History{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="h5 fw-semibold text-dark mb-0">Pipeline Execution History</h6>
+                    <a href="{% url 'alm_app:execute_view' %}" class="btn  btn-sm" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
+                    New Pipeline Run</a>
+                </div>
+                <div class="card-body">
+                    {% if history %}
+                    <div id="executionAccordion">
+                        {% for entry in history %}
+                        <div class="card mb-3">
+                            <div class="card-header p-0">
+                                <button class="btn btn-link w-100 text-start p-3 text-decoration-none" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse{{ forloop.counter }}" 
+                                        aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
+                                        aria-controls="collapse{{ forloop.counter }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="fw-medium text-dark">{{ entry.fic_mis_date|date:"Y-m-d" }}</span>
+                                            <span class="badge bg-secondary ms-2">{{ entry.runs|length }} run{{ entry.runs|length|pluralize }}</span>
+                                        </div>
+                                        <i class="fas fa-chevron-down transition-transform {% if forloop.first %}rotate-180{% endif %}"></i>
+                                    </div>
+                                </button>
+                            </div>
+                            <div id="collapse{{ forloop.counter }}" class="collapse {% if forloop.first %}show{% endif %}" 
+                                 data-bs-parent="#executionAccordion">
+                                <div class="card-body p-0">
+                                    {% for run in entry.runs %}
+                                    <div class="pipeline-run p-3 {% if not forloop.last %}border-bottom{% endif %}">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <h6 class="mb-0 fw-semibold">Run #{{ run.run_number }}</h6>
+                                                <span class="badge {% if run.overall_status == 'Success' %}bg-success{% else %}bg-danger{% endif %} ms-2">
+                                                    {{ run.overall_status }}
+                                                </span>
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    data-bs-toggle="collapse" 
+                                                    data-bs-target="#runDetails{{ forloop.parentloop.counter }}_{{ forloop.counter }}">
+                                                View Details
+                                            </button>
+                                        </div>
+                                        <div class="d-flex gap-4 text-muted small">
+                                            <div>
+                                                <i class="far fa-clock me-1"></i>
+                                                Total Time: {{ run.total_time }}s
+                                            </div>
+                                            <div>
+                                                <i class="far fa-calendar-alt me-1"></i>
+                                                Started: {{ run.start_time|date:"Y-m-d H:i:s" }}
+                                            </div>
+                                            <div>
+                                                <i class="far fa-flag me-1"></i>
+                                                Completed: {{ run.end_time|date:"Y-m-d H:i:s" }}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="collapse mt-3" id="runDetails{{ forloop.parentloop.counter }}_{{ forloop.counter }}">
+                                            <div class="table-responsive">
+                                                <table class="table table-hover mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th class="fw-medium text-muted small text-uppercase">Step</th>
+                                                            <th class="fw-medium text-muted small text-uppercase">Status</th>
+                                                            <th class="fw-medium text-muted small text-uppercase">Duration</th>
+                                                            <th class="fw-medium text-muted small text-uppercase">Started</th>
+                                                            <th class="fw-medium text-muted small text-uppercase">Completed</th>
+                                                            <th class="fw-medium text-muted small text-uppercase">Details</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for execution in run.executions %}
+                                                        <tr class="{% if execution.status == 'Success' %}table-success{% elif execution.status == 'Failed' %}table-danger{% else %}table-warning{% endif %}">
+                                                            <td class="fw-medium">{{ execution.process_name }}</td>
+                                                            <td>
+                                                                <span class="badge {% if execution.status == 'Success' %}bg-success{% elif execution.status == 'Failed' %}bg-danger{% else %}bg-warning{% endif %}">
+                                                                    {{ execution.status }}
+                                                                </span>
+                                                            </td>
+                                                            <td>{{ execution.execution_time|floatformat:2 }}s</td>
+                                                            <td class="small">{{ execution.start_time|date:"H:i:s" }}</td>
+                                                            <td class="small">{{ execution.end_time|date:"H:i:s" }}</td>
+                                                            <td class="small text-break">
+                                                                {% if execution.error_message %}
+                                                                <button class="btn btn-sm btn-link text-danger p-0" 
+                                                                        data-bs-toggle="tooltip" 
+                                                                        data-bs-placement="left"
+                                                                        title="{{ execution.error_message }}">
+                                                                    View Error
+                                                                </button>
+                                                                {% else %}
+                                                                -
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <p class="mb-0">No execution history found. <a href="{% url 'alm_app:execute_view' %}" class="alert-link">Start a new pipeline run</a> to create execution records.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.transition-transform {
+    transition: transform 0.2s ease-in-out;
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+.pipeline-run {
+    background-color: #fff;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.pipeline-run:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.btn-link {
+    text-decoration: none;
+}
+
+.btn-link:hover {
+    text-decoration: none;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.table > :not(caption) > * > * {
+    padding: 0.75rem;
+}
+
+.text-break {
+    word-break: break-word;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Handle collapse arrow rotation
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const icon = this.querySelector('.fas.fa-chevron-down');
+            if (icon) {
+                icon.classList.toggle('rotate-180');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,571 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Capesso ALM{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            margin: 0;
+            background-color: #ffffff;
+        }
+
+        /* Header styles */
+        .header {
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 40;
+            height: 64px;
+        }
+
+        /* Common text styles for all navigation */
+        .nav-text {
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        /* Sidebar styles */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 64px;
+            height: calc(100vh - 64px);
+            width: 256px;
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            transform: translateX(-100%);
+            transition: transform 0.2s ease-in-out;
+            overflow-y: auto;
+            z-index: 30;
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+
+        @media (min-width: 992px) {
+            .sidebar {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 256px;
+            }
+        }
+
+        /* Top Navigation styles */
+        .top-nav {
+            background-color: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0.5rem 0;
+            position: fixed;
+            top: 64px;
+            left: 256px;
+            right: 0;
+            z-index: 35;
+            height: 48px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 991px) {
+            .top-nav {
+                left: 0;
+            }
+        }
+
+        .top-nav-item {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            color: #374151;
+            text-decoration: none;
+            transition: all 0.2s;
+            margin: 0 4px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .top-nav-item:hover {
+            color: #2563eb;
+            background-color: rgba(37, 99, 235, 0.1);
+            text-decoration: none;
+        }
+
+        .top-nav-item.active {
+            color: #2563eb;
+            background-color: rgba(37, 99, 235, 0.1);
+        }
+
+        .top-nav-item svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+        }
+
+        /* Sidebar navigation items */
+        .sidebar-nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #374151;
+            text-decoration: none;
+            transition: all 0.2s;
+            margin: 4px 8px;
+            border-radius: 6px;
+            background-color: white;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .sidebar-nav-item:hover {
+            color: #2563eb;
+            background-color: rgba(37, 99, 235, 0.1);
+            text-decoration: none;
+        }
+
+        .sidebar-nav-item.active {
+            color: #2563eb;
+            background-color: rgba(37, 99, 235, 0.1);
+        }
+
+        .sidebar-nav-item svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        /* Main content styles */
+        .main-content {
+            padding-top: 112px;
+            min-height: 100vh;
+            background-color: #f9fafb;
+        }
+
+        /* User menu styles */
+        .user-menu {
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* User menu text */
+        .user-menu .btn {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Dropdown styles */
+        .dropdown-menu {
+            font-size: 14px;
+            z-index: 45;
+        }
+
+        .dropdown-item {
+            font-size: 14px;
+            font-weight: 400;
+            padding: 8px 16px;
+        }
+
+        /* Logo text */
+        .header .fs-5 {
+            font-size: 16px !important;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 991px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+    {% if not request.user.is_authenticated %}
+        {% if request.path != '/login/' %}
+            <script>window.location.href = '/login/';</script>
+        {% else %}
+            {% block layout %}{% endblock %}
+        {% endif %}
+    {% else %}
+        {% if request.path == '/login/' %}
+            <script>window.location.href = '/dashboard/';</script>
+        {% else %}
+            <!-- Header -->
+            <header class="header">
+                <div class="container-fluid h-100">
+                    <div class="row h-100 align-items-center">
+                        <!-- Left side - Logo and Toggle -->
+                        <div class="col-auto d-flex align-items-center">
+                            <button id="sidebar-toggle" class="btn-toggle d-lg-none me-3">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                                </svg>
+                            </button>
+                            <div class="d-flex align-items-center">
+                                <img src="{% static 'images/icon.webp' %}" alt="ALM Logo" class="rounded-circle" style="width: 32px; height: 32px;">
+                                <span class="ms-2 fs-5 fw-semibold text-dark">Asset Liability Management</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Right side - User menu -->
+                        <div class="col d-flex justify-content-end align-items-center">
+                            <div class="dropdown user-menu">
+                                <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                                    <div class="user-avatar me-2">
+                                        <span class="text-muted fw-semibold">
+                                            {% if user.first_name %}{{ user.first_name.0 }}{% else %}{{ user.username.0|upper }}{% endif %}
+                                        </span>
+                                    </div>
+                                    <span class="small fw-medium text-dark">
+                                        {% if user.first_name %}{{ user.first_name }}{% else %}{{ user.username }}{% endif %}
+                                    </span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="/admin/">Admin Panel</a></li>
+                                    <li><a class="dropdown-item text-danger" href="{% url 'alm_app:logout' %}">Logout</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Sidebar -->
+            <aside id="sidebar" class="sidebar">
+                <nav class="p-3" id="sidebar-nav">
+                    <!-- Dynamic content will be populated here by JavaScript -->
+                </nav>
+            </aside>
+
+            <!-- Top Navigation -->
+            <nav class="top-nav">
+                <div class="container-fluid">
+                    <!-- Dashboard -->
+                    <a href="{% url 'alm_app:dashboard' %}" class="top-nav-item" data-title="Dashboard" data-icon="home">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>
+                        Dashboard
+                    </a>
+
+                    <!-- Execution -->
+                    <a href="{% url 'alm_app:execute_view' %}" class="top-nav-item" data-title="Execution" data-icon="play">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                        </svg>
+                        Execution
+                    </a>
+
+                    <!-- Time Buckets -->
+                    <a href="{% url 'alm_app:time_bucket_list' %}" class="top-nav-item" data-title="Time Buckets" data-icon="clock">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Time Buckets
+                    </a>
+
+                    <!-- Behavioural Patterns -->
+                    <a href="{% url 'alm_app:pattern-list' %}" class="top-nav-item" data-title="Behavioural Patterns" data-icon="chart">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        Behavioural Patterns
+                    </a>
+
+                    <!-- Reports -->
+                    <a href="#" class="top-nav-item" data-title="Reports" data-has-submenu="true" data-icon="document">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Reports
+                    </a>
+
+                    <!-- Data Management -->
+                    <a href="#" class="top-nav-item" data-title="Data Management" data-has-submenu="true" data-icon="database">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                        </svg>
+                        Data Management
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <div class="container-fluid p-4">
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+
+            <!-- JavaScript -->
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+            
+            <!-- Add this block for child templates to include their JavaScript -->
+            {% block extra_js %}{% endblock %}
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const sidebar = document.getElementById('sidebar');
+                    const sidebarToggle = document.getElementById('sidebar-toggle');
+                    const sidebarNav = document.getElementById('sidebar-nav');
+                    const topNavItems = document.querySelectorAll('.top-nav-item');
+
+                    // Navigation state
+                    let currentNavState = {
+                        activeTopNav: null,
+                        sidebarContent: null
+                    };
+
+                    // Icon mapping for sidebar items
+                    const iconMap = {
+                        'report': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>`,
+                        'upload': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>`,
+                        'home': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                        </svg>`,
+                        'play': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>`,
+                        'clock': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>`,
+                        'chart': `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>`
+                    };
+
+                    // Get first submenu URL for a given nav type
+                    function getFirstSubmenuUrl(navType) {
+                        if (navType === 'Reports') {
+                            return "{% url 'alm_app:contractual_gap_report_form' %}";
+                        } else if (navType === 'Data Management') {
+                            return "{% url 'staging:load_loans' %}";
+                        }
+                        return null;
+                    }
+
+                    // Top navigation click handlers
+                    topNavItems.forEach(item => {
+                        item.addEventListener('click', function(e) {
+                            const hasSubmenu = this.dataset.hasSubmenu === 'true';
+                            const title = this.dataset.title;
+                            const icon = this.dataset.icon;
+                            const url = this.getAttribute('href');
+                            
+                            // Remove active class from all items
+                            topNavItems.forEach(i => i.classList.remove('active'));
+                            
+                            // Add active class to clicked item
+                            this.classList.add('active');
+
+                            if (hasSubmenu) {
+                                e.preventDefault();
+                                // Update sidebar content first
+                                updateSidebarContent(title);
+                                
+                                // Get and navigate to first submenu URL
+                                const firstUrl = getFirstSubmenuUrl(title);
+                                if (firstUrl) {
+                                    // Add a small delay to allow sidebar content to update
+                                    setTimeout(() => {
+                                        window.location.href = firstUrl;
+                                    }, 100);
+                                }
+                            } else {
+                                // For items without submenu, show single item in sidebar
+                                const singleItemContent = `
+                                    <a href="${url}" class="sidebar-nav-item active">
+                                        ${iconMap[icon] || ''}
+                                        <span>${title}</span>
+                                    </a>
+                                `;
+                                sidebarNav.innerHTML = singleItemContent;
+                            }
+                        });
+                    });
+
+                    function updateSidebarContent(navType) {
+                        let sidebarContent = '';
+                        let firstItemUrl = null;
+                        
+                        if (navType === 'Reports') {
+                            sidebarContent = `
+                                <a href="{% url 'alm_app:contractual_gap_report_form' %}" class="sidebar-nav-item">
+                                    ${iconMap['report']}
+                                    <span>Contractual Gap Base</span>
+                                </a>
+                                <a href="{% url 'alm_app:adjustments_form' %}" class="sidebar-nav-item">
+                                    ${iconMap['report']}
+                                    <span>Contractual Adjustments</span>
+                                </a>
+                                <a href="{% url 'alm_app:Contractual_Cons_gap_report_form_cons' %}" class="sidebar-nav-item">
+                                    ${iconMap['report']}
+                                    <span>Contractual Gap Cons</span>
+                                </a>
+                                <a href="{% url 'alm_app:behavioural_gap_report_form_cons' %}" class="sidebar-nav-item">
+                                    ${iconMap['report']}
+                                    <span>Behavioural Gap</span>
+                                </a>
+                                <a href="{% url 'alm_app:rate_sensitive_gap_report_form_cons' %}" class="sidebar-nav-item">
+                                    ${iconMap['report']}
+                                    <span>Rate Sensitive Gap</span>
+                                </a>
+                            `;
+                        } else if (navType === 'Data Management') {
+                            sidebarContent = `
+                                <a href="{% url 'staging:load_loans' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload Loan Contracts</span>
+                                </a>
+                                <a href="{% url 'staging:load_overdraft' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload Overdrafts</span>
+                                </a>
+                                <a href="{% url 'staging:load_schedule' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload Schedules</span>
+                                </a>
+                                <a href="{% url 'staging:load_investment' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload Investments</span>
+                                </a>
+                                <a href="{% url 'staging:load_firstday' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload First Day</span>
+                                </a>
+                                <a href="{% url 'staging:load_creditline' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload Credit Lines</span>
+                                </a>
+                                <a href="{% url 'staging:load_coa' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload Coa</span>
+                                </a>
+                                <a href="{% url 'staging:load_master' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload Product Master</span>
+                                </a>
+                                <a href="{% url 'staging:load_product' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Upload Product Balances</span>
+                                </a>
+                            `;
+                        }
+
+                        sidebarNav.innerHTML = sidebarContent;
+                        
+                        // Show sidebar on mobile when content is updated
+                        if (window.innerWidth < 992) {
+                            sidebar.classList.add('show');
+                        }
+
+                        // Add click handlers to new sidebar nav items
+                        const sidebarNavItems = sidebarNav.querySelectorAll('.sidebar-nav-item');
+                        sidebarNavItems.forEach(item => {
+                            item.addEventListener('click', function() {
+                                sidebarNavItems.forEach(i => i.classList.remove('active'));
+                                this.classList.add('active');
+                            });
+                        });
+
+                        // Set the first item as active if we're on its URL
+                        const currentPath = window.location.pathname;
+                        const firstItem = sidebarNavItems[0];
+                        if (firstItem && firstItem.getAttribute('href') === currentPath) {
+                            firstItem.classList.add('active');
+                        }
+                    }
+
+                    // Mobile sidebar toggle
+                    sidebarToggle.addEventListener('click', function() {
+                        sidebar.classList.toggle('show');
+                    });
+
+                    // Close sidebar when clicking outside on mobile
+                    document.addEventListener('click', function(e) {
+                        if (window.innerWidth < 992) {
+                            if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                                sidebar.classList.remove('show');
+                            }
+                        }
+                    });
+
+                    // Handle window resize
+                    window.addEventListener('resize', function() {
+                        if (window.innerWidth >= 992) {
+                            sidebar.classList.remove('show');
+                        }
+                    });
+
+                    // Initialize active state based on current URL
+                    function initializeActiveState() {
+                        const currentPath = window.location.pathname;
+                        
+                        // Set active state for top nav items
+                        topNavItems.forEach(item => {
+                            const itemUrl = item.getAttribute('href');
+                            const hasSubmenu = item.dataset.hasSubmenu === 'true';
+                            
+                            if (hasSubmenu) {
+                                // For items with submenu, check if current path matches any submenu item
+                                if ((currentPath.includes('report') && item.dataset.title === 'Reports') ||
+                                    (currentPath.includes('staging') && item.dataset.title === 'Data Management')) {
+                                    item.classList.add('active');
+                                    updateSidebarContent(item.dataset.title);
+                                }
+                            } else if (itemUrl && currentPath === itemUrl) {
+                                // For single items
+                                item.classList.add('active');
+                                const title = item.dataset.title;
+                                const icon = item.dataset.icon;
+                                const singleItemContent = `
+                                    <a href="${itemUrl}" class="sidebar-nav-item active">
+                                        ${iconMap[icon] || ''}
+                                        <span>${title}</span>
+                                    </a>
+                                `;
+                                sidebarNav.innerHTML = singleItemContent;
+                            }
+                        });
+                    }
+
+                    // Initialize the page
+                    initializeActiveState();
+                });
+            </script>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

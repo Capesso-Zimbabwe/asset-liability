@@ -481,9 +481,20 @@
                                     <span>Credit Lines</span>
                                 </a>
 
+                                <a href="{% url 'staging:load_rates' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Exchange Rates</span>
+                                </a>
+
+
                                 <a href="{% url 'staging:load_product' %}" class="sidebar-nav-item">
                                     ${iconMap['upload']}
                                     <span>Trial Balance</span>
+                                </a>
+
+                                <a href="{% url 'staging:load_customer' %}" class="sidebar-nav-item">
+                                    ${iconMap['upload']}
+                                    <span>Customers</span>
                                 </a>
                                 
                                 <a href="{% url 'staging:view_coa' %}" class="sidebar-nav-item">

@@ -56,10 +56,10 @@ class FSI_Loans_Processing(models.Model):
 class stg_party_master(models.Model):
     fic_mis_date = models.DateField()
     v_party_id = models.CharField(max_length=50, unique=True) 
-    v_partner_name = models.CharField(max_length=50)
-    v_party_type = models.CharField(max_length=50, null=True )
-    v_party_type_code = models.CharField(max_length=50, null=True)
-    v_party_type_name = models.CharField(max_length=50, null=True)
+    v_partner_name = models.CharField(max_length=50,blank=True,null=True)
+    v_party_type = models.CharField(max_length=50, blank=True,null=True )
+    v_party_type_code = models.CharField(max_length=50, blank=True,null=True)
+    v_party_type_name = models.CharField(max_length=50, blank=True,null=True)
     
     class Meta:
         db_table = 'stg_party_master'

@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Upload Exchange Rates{% endblock %}
+
+{% block extra_css %}
+<style>
+    .drop-zone { border: 2px dashed #dee2e6; transition: all .3s; }
+    .drop-zone.dragover, .drop-zone:hover { border-color:#0d6efd; background:#f8f9fa; }
+    .step-circle { width:40px; height:40px; line-height:40px; text-align:center; border-radius:50%; display:inline-block; background:#f8f9fa; color:#6c757d; }
+    .step-circle.active { background:#0d6efd; color:#fff; }
+    .step-circle.completed { background:#198754; color:#fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-2">Upload Exchange Rates</h2>
+            <p class="text-muted">Import exchange rates from Excel or CSV files.</p>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="position-relative">
+                <div class="progress" style="height:2px;">
+                    <div class="progress-bar" role="progressbar" style="width: {% if step == 1 %}25%{% elif step == 2 %}50%{% elif step == 3 %}75%{% else %}100%{% endif %}"></div>
+                </div>
+                <div class="row text-center mt-3">
+                    <div class="col-3"><div class="step-circle {% if step >= 1 %}active{% endif %} {% if step > 1 %}completed{% endif %} mb-2">{% if step > 1 %}<i class="fas fa-check"></i>{% else %}1{% endif %}</div><div class="small {% if step >= 1 %}text-primary{% else %}text-muted{% endif %}">Upload</div></div>
+                    <div class="col-3"><div class="step-circle {% if step >= 2 %}active{% endif %} {% if step > 2 %}completed{% endif %} mb-2">{% if step > 2 %}<i class="fas fa-check"></i>{% else %}2{% endif %}</div><div class="small {% if step >= 2 %}text-primary{% else %}text-muted{% endif %}">Map</div></div>
+                    <div class="col-3"><div class="step-circle {% if step >= 3 %}active{% endif %} {% if step > 3 %}completed{% endif %} mb-2">{% if step > 3 %}<i class="fas fa-check"></i>{% else %}3{% endif %}</div><div class="small {% if step >= 3 %}text-primary{% else %}text-muted{% endif %}">Preview</div></div>
+                    <div class="col-3"><div class="step-circle {% if step >= 4 %}active{% endif %} mb-2">4</div><div class="small {% if step >= 4 %}text-primary{% else %}text-muted{% endif %}">Import</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div id="upload-section" class="card-body {% if step != 1 %}d-none{% endif %}">
+            <div id="drop-zone" class="drop-zone rounded p-5 text-center">
+                <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                <h5 class="mb-3">Drag and drop your file here</h5>
+                <p class="text-muted mb-3">or</p>
+                <input type="file" id="file-input" class="d-none" accept=".csv,.xlsx,.xls">
+                <button class="btn px-4" onclick="document.getElementById('file-input').click()" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">Select File</button>
+                <p class="text-muted small mt-3 mb-0">Supported formats: Excel, CSV (Max size: 500MB)</p>
+            </div>
+            <div id="file-details" class="mt-4 d-none">
+                <div class="card bg-light"><div class="card-body"><h6 class="card-title mb-3">File Details</h6><p id="file-name" class="card-text mb-2"></p><p id="file-size" class="card-text mb-2"></p><p id="row-count" class="card-text mb-0"></p></div></div>
+            </div>
+        </div>
+
+        <div id="mapping-section" class="card-body {% if step != 2 %}d-none{% endif %}">
+            <form id="mapping-form" class="mb-4"></form>
+            <div class="alert alert-info"><h6 class="alert-heading mb-3"><i class="fas fa-info-circle me-2"></i>Required Fields</h6><ul class="list-unstyled mb-0" id="required-fields-list"></ul></div>
+        </div>
+
+        <div id="preview-section" class="card-body {% if step != 3 %}d-none{% endif %}">
+            <div class="table-responsive"><table id="preview-table" class="table table-striped table-bordered"></table></div>
+        </div>
+
+        <div id="import-section" class="card-body {% if step != 4 %}d-none{% endif %}">
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2"><span>Overall Progress</span><span class="badge bg-primary" id="progress-percentage">0%</span></div>
+                <div class="progress" style="height:10px;"><div id="progress" class="progress-bar progress-bar-striped progress-bar-animated"></div></div>
+            </div>
+            <div class="row g-4 mb-4">
+                <div class="col-md-4"><div class="card bg-light h-100"><div class="card-body text-center"><h6 class="text-muted mb-3">Total Rows</h6><h2 id="total-rows" class="display-5 mb-0">0</h2></div></div></div>
+                <div class="col-md-4"><div class="card bg-light h-100"><div class="card-body text-center"><h6 class="text-muted mb-3">Successful</h6><h2 id="success-count" class="display-5 mb-0 text-success">0</h2></div></div></div>
+                <div class="col-md-4"><div class="card bg-light h-100"><div class="card-body text-center"><h6 class="text-muted mb-3">Failed</h6><h2 id="error-count" class="display-5 mb-0 text-danger">0</h2></div></div></div>
+            </div>
+            <div id="error-list" class="alert alert-danger d-none"></div>
+        </div>
+
+        <div class="card-footer bg-light d-flex justify-content-between py-3">
+            <button id="prev-btn" class="btn btn-outline-secondary px-4 {% if step == 1 %}d-none{% endif %}"><i class="fas fa-arrow-left me-2"></i>Previous</button>
+            <button id="next-btn" class="btn px-4" disabled style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';"><span id="next-btn-text">Next</span><i class="fas fa-arrow-right ms-2"></i></button>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="success-modal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-body text-center p-5"><div class="mb-4"><div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width:80px;height:80px;"><i class="fas fa-check fa-3x"></i></div><h4 class="mb-3">Import Complete</h4><p class="text-muted mb-4">All exchange rates have been successfully imported.</p></div><div class="d-grid gap-2 d-sm-flex justify-content-sm-center"><button type="button" class="btn px-4 py-2" onclick="viewRates()" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">View Rates</button><button type="button" class="btn btn-outline-secondary px-4 py-2" onclick="uploadAnother()">Upload Another</button></div></div></div></div></div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="alert-template" class="toast align-items-center border-0 d-none" role="alert" aria-atomic="true"><div class="d-flex"><div class="toast-body"></div><button type="button" class="btn-close ms-auto me-2" data-bs-dismiss="toast"></button></div></div></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name){let v=null;if(document.cookie&&document.cookie!==''){const cs=document.cookie.split(';');for(let i=0;i<cs.length;i++){const c=cs[i].trim();if(c.substring(0,name.length+1)===(name+'=')){v=decodeURIComponent(c.substring(name.length+1));break;}}}return v;}
+const csrftoken = getCookie('csrftoken');
+
+const dropZone=document.getElementById('drop-zone');
+const fileInput=document.getElementById('file-input');
+let uploadedFileId=null;
+let backendFields=[]; let requiredFieldNames=[];
+['dragenter','dragover','dragleave','drop'].forEach(e=>dropZone.addEventListener(e,preventDefaults,false));
+function preventDefaults(e){e.preventDefault();e.stopPropagation();}
+['dragenter','dragover'].forEach(e=>dropZone.addEventListener(e,()=>dropZone.classList.add('border-primary','bg-light'),false));
+['dragleave','drop'].forEach(e=>dropZone.addEventListener(e,()=>dropZone.classList.remove('border-primary','bg-light'),false));
+dropZone.addEventListener('drop',handleDrop,false); fileInput.addEventListener('change',handleChange,false);
+function handleDrop(e){const dt=e.dataTransfer; const file=dt.files[0]; handleFile(file);} function handleChange(e){const file=e.target.files[0]; handleFile(file);} 
+function showAlert(message,type){const t=document.getElementById('alert-template');const toast=t.cloneNode(true);toast.removeAttribute('id');toast.classList.remove('d-none');toast.classList.add(`bg-${type}`,'text-white');toast.querySelector('.toast-body').textContent=message;document.querySelector('.toast-container').appendChild(toast);new bootstrap.Toast(toast).show();toast.addEventListener('hidden.bs.toast',()=>toast.remove());}
+
+function handleFile(file){
+    const validTypes=['application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','text/csv'];
+    if(!validTypes.includes(file.type) && !['.csv','.xlsx','.xls'].some(ext=>file.name.toLowerCase().endsWith(ext))){showAlert('Please upload an Excel or CSV file.','danger');return;}
+    if(file.size>500*1024*1024){showAlert('File size exceeds 500MB limit.','danger');return;}
+    const fileDetails=document.getElementById('file-details');fileDetails.classList.remove('d-none');
+    document.getElementById('file-name').textContent=`File Name: ${file.name}`;
+    document.getElementById('file-size').textContent=`Size: ${(file.size/1024/1024).toFixed(2)} MB`;
+    const formData=new FormData(); formData.append('file',file);
+    fetch('{% url "staging:upload_rates" %}',{method:'POST',headers:{'X-CSRFToken':csrftoken},body:formData})
+        .then(r=>{if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json();})
+        .then(d=>{ if(d.success){ uploadedFileId=d.file_id; document.getElementById('row-count').textContent=`Rows: ${d.row_count}`; showAlert('File uploaded successfully!','success'); enableNextButton(); } else { showAlert(d.error||'Error uploading file.','danger'); disableNextButton(); } })
+        .catch(()=>{ showAlert('Error uploading file. Please try again.','danger'); disableNextButton(); });
+}
+
+const nextBtn=document.getElementById('next-btn'); const prevBtn=document.getElementById('prev-btn'); const sections=['upload-section','mapping-section','preview-section','import-section']; let currentStep={{ step }};
+function enableNextButton(){ nextBtn.disabled=false; nextBtn.classList.remove('opacity-50'); }
+function disableNextButton(){ nextBtn.disabled=true; nextBtn.classList.add('opacity-50'); }
+nextBtn.addEventListener('click',()=>{ if(currentStep<4 && !nextBtn.disabled){ if(currentStep===1 && !uploadedFileId){showAlert('Please upload a file first.','danger'); return;} document.getElementById(sections[currentStep-1]).classList.add('d-none'); document.getElementById(sections[currentStep]).classList.remove('d-none'); currentStep++; updateNavigation(); if(currentStep===2){ loadColumnMapping(); disableNextButton(); } else if(currentStep===3){ loadPreview(); } else if(currentStep===4){ startImport(); } } });
+prevBtn.addEventListener('click',()=>{ if(currentStep>1){ document.getElementById(sections[currentStep-1]).classList.add('d-none'); document.getElementById(sections[currentStep-2]).classList.remove('d-none'); currentStep--; updateNavigation(); if(currentStep===1 && uploadedFileId) enableNextButton(); } });
+function updateNavigation(){ prevBtn.classList.toggle('d-none', currentStep===1); nextBtn.querySelector('#next-btn-text').textContent = currentStep===4 ? 'Import' : 'Next'; }
+
+function loadColumnMapping(){ if(!uploadedFileId){ showAlert('No file uploaded.','danger'); return; }
+    fetch(`/staging/rates/columns/${uploadedFileId}/`).then(r=>r.json()).then(data=>{
+        if(data.success){ const mappingForm=document.getElementById('mapping-form'); mappingForm.innerHTML=''; backendFields=data.fields||[]; requiredFieldNames=backendFields.filter(f=>f.required).map(f=>f.value);
+            const reqList=document.getElementById('required-fields-list'); reqList.innerHTML=''; requiredFieldNames.forEach(name=>{ const fieldMeta=backendFields.find(f=>f.value===name); const li=document.createElement('li'); li.className='mb-2'; li.innerHTML = `<i class="fas fa-circle text-muted me-2"></i>${fieldMeta?fieldMeta.label:name}`; reqList.appendChild(li); });
+            const fieldInfo={}; backendFields.forEach(field=>{ const c=[]; if(field.required)c.push('Required'); if(field.unique)c.push('Unique'); if(field.max_length)c.push(`Max length: ${field.max_length}`); if(field.max_digits && field.decimal_places)c.push(`Max digits: ${field.max_digits}, Decimal places: ${field.decimal_places}`); if(field.help_text)c.push(field.help_text); fieldInfo[field.value]=c; });
+            data.columns.forEach(column=>{ const div=document.createElement('div'); div.className='mb-3'; const autoMapped=data.automatic_mapping[column]; const labelHtml=`<div class="d-flex justify-content-between align-items-center mb-2"><label class="form-label mb-0">${column}</label>${autoMapped?'<span class="badge bg-success">Auto-mapped</span>':''}</div>`;
+                const selectHtml = `<select class="form-select" name="mapping_${column}" onchange="validateMapping()"><option value="">-- Select Field --</option>${backendFields.map(field=>{const constraints=fieldInfo[field.value]; const t=constraints.length>0?` (${constraints.join(', ')})`:''; return `<option value="${field.value}" ${autoMapped===field.value?'selected':''} ${field.required?'data-required=\"true\"':''}>${field.label}${t}</option>`;}).join('')}</select>`;
+                div.innerHTML = labelHtml + selectHtml; mappingForm.appendChild(div);
+            });
+            validateMapping();
+        } else { showAlert(data.error,'danger'); }
+    }).catch(()=>showAlert('Error loading columns. Please try again.','danger'));
+}
+
+function validateMapping(){ const requiredFields=requiredFieldNames; const mappingSelects=document.querySelectorAll('#mapping-form select'); const selectedValues=Array.from(mappingSelects).map(s=>s.value); const allRequiredMapped=requiredFields.every(f=>selectedValues.includes(f)); const duplicates=selectedValues.filter(v=>v!=='').filter((v,i,self)=>self.indexOf(v)!==i); if(duplicates.length>0){ showAlert('Warning: Some fields are mapped multiple times.','warning'); disableNextButton(); return;} if(allRequiredMapped) enableNextButton(); else disableNextButton(); }
+
+function loadPreview(){ const mappingData=getMappingData(); fetch('/staging/rates/preview/',{ method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrftoken}, body: JSON.stringify({ file_id: uploadedFileId, mapping: mappingData }) })
+    .then(r=>r.json()).then(data=>{ const table=document.getElementById('preview-table'); table.innerHTML=''; if(!data.success){ showAlert(data.error,'danger'); return;} if(!data.preview || data.preview.length===0){ table.innerHTML='<tbody><tr><td class="text-muted">No rows to preview</td></tr></tbody>'; return;} const thead=document.createElement('thead'); thead.innerHTML=`<tr class="table-light">${Object.keys(data.preview[0]).map(k=>`<th class="text-nowrap">${k}</th>`).join('')}</tr>`; table.appendChild(thead); const tbody=document.createElement('tbody'); data.preview.forEach(row=>{ tbody.innerHTML += `<tr>${Object.values(row).map(v=>`<td>${v!==null?v:''}</td>`).join('')}</tr>`; }); table.appendChild(tbody); }).catch(()=>showAlert('Error loading preview. Please try again.','danger'));
+}
+
+function startImport(){ const mappingData=getMappingData(); startProgressPolling(); fetch('/staging/rates/import/',{ method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrftoken}, body: JSON.stringify({ file_id: uploadedFileId, mapping: mappingData }) })
+    .then(r=>r.json()).then(d=>{ if(!d.success){ stopProgressPolling(); showAlert(d.error,'danger'); } }).catch(()=>{ stopProgressPolling(); showAlert('Error during import. Please try again.','danger'); }); }
+
+let progressInterval=null; function startProgressPolling(){ if(!uploadedFileId) return; stopProgressPolling(); fetch(`/staging/rates/import/?file_id=${uploadedFileId}`).then(r=>r.json()).then(d=>{ if(d.success) updateProgress(d); }); progressInterval=setInterval(()=>{ fetch(`/staging/rates/import/?file_id=${uploadedFileId}`).then(r=>r.json()).then(d=>{ if(d.success){ updateProgress(d); if(d.progress>=100){ stopProgressPolling(); } } }).catch(()=>{}); },800); }
+function stopProgressPolling(){ if(progressInterval){ clearInterval(progressInterval); progressInterval=null; } }
+
+function updateProgress(data){ const progress=document.getElementById('progress'); const percentage=document.getElementById('progress-percentage'); progress.style.width=`${data.progress}%`; percentage.textContent=`${data.progress}%`; document.getElementById('total-rows').textContent=data.total; document.getElementById('success-count').textContent=data.success_count; document.getElementById('error-count').textContent=data.errors.length; const errorList=document.getElementById('error-list'); if(data.errors.length>0){ errorList.classList.remove('d-none'); errorList.innerHTML = `<h6 class="alert-heading mb-2">Import Errors</h6><ul class="mb-0">${data.errors.map(e=>`<li>${e}</li>`).join('')}</ul>`; } if(data.progress===100){ new bootstrap.Modal(document.getElementById('success-modal')).show(); } }
+
+function getMappingData(){ const m={}; document.querySelectorAll('#mapping-form select').forEach(select=>{ const key=select.name.replace('mapping_',''); m[key]=select.value; }); return m; }
+function viewRates(){ window.location.href = '/staging/rates/'; }
+function uploadAnother(){ window.location.reload(); }
+</script>
+{% endblock %}

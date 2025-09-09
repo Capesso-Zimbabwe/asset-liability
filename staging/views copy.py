@@ -86,11 +86,11 @@ def create_file_upload_view(model_class):
                     'error': 'Invalid file type. Please upload a CSV or Excel file.'
                 })
 
-            # Validate file size (10MB limit)
-            if uploaded_file.size > 10 * 1024 * 1024:
+            # Validate file size (500MB limit)
+            if uploaded_file.size > 500 * 1024 * 1024:
                 return JsonResponse({
                     'success': False,
-                    'error': 'File size exceeds 10MB limit.'
+                    'error': 'File size exceeds 500MB limit.'
                 })
 
             # Save and process file

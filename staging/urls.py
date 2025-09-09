@@ -80,4 +80,18 @@ urlpatterns = [
     path('load_product/columns/<str:file_id>/', views.get_product_columns, name='get_product_columns'),
     path('load_product/preview/', views.preview_product_data, name='preview_product'),
     path('load_product/import/', views.import_product_data, name='import_product'),
+
+    # Exchange Rate Upload URLs
+    path('rates/', views.load_rates_view, name='load_rates'),
+    path('rates/upload/', views.upload_rates_file, name='upload_rates'),
+    path('rates/columns/<str:file_id>/', views.get_rates_columns, name='get_rates_columns'),
+    path('rates/preview/', views.preview_rates_data, name='preview_rates'),
+    path('rates/import/', views.import_rates_data, name='import_rates'),
+
+    # Customer Upload URLs
+    path('customer/', views.load_customer_view, name='load_customer'),
+    path('customer/upload/', views.upload_customer_file, name='upload_customer'),
+    path('customer/columns/<str:file_id>/', views.get_customer_columns, name='get_customer_columns'),
+    path('customer/preview/', views.preview_customer_data, name='preview_customer'),
+    path('customer/import/', views.import_customer_data, name='import_customer'),
 ]

@@ -186,7 +186,7 @@
                     <button class="btn px-4" onclick="document.getElementById('file-input').click()" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
                         Select File
                     </button>
-                    <p class="text-muted small mt-3 mb-0">Supported formats: Excel, CSV (Max size: 10MB)</p>
+                    <p class="text-muted small mt-3 mb-0">Supported formats: Excel, CSV (Max size: 500MB)</p>
                 </div>
     
                 <!-- File Details -->
@@ -212,12 +212,7 @@
                     <h6 class="alert-heading mb-3">
                         <i class="fas fa-info-circle me-2"></i>Required Fields
                     </h6>
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Account Number</li>
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>FIC MIS Date</li>
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Product Code</li>
-                        <li><i class="fas fa-circle text-muted me-2"></i>Balance</li>
-                    </ul>
+                    <ul class="list-unstyled mb-0" id="required-fields-list"></ul>
                 </div>
             </div>
     
@@ -350,6 +345,9 @@
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         let uploadedFileId = null;
+        // Dynamic fields cache
+        let backendFields = [];
+        let requiredFieldNames = [];
     
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, preventDefaults, false);
@@ -404,9 +402,9 @@
                 return;
             }
     
-            // Check file size (10MB limit)
-            if (file.size > 10 * 1024 * 1024) {
-                showAlert('File size exceeds 10MB limit.', 'danger');
+            // Check file size (500MB limit)
+            if (file.size > 500 * 1024 * 1024) {
+                showAlert('File size exceeds 500MB limit.', 'danger');
                 return;
             }
     
@@ -540,10 +538,24 @@
                     if (data.success) {
                         const mappingForm = document.getElementById('mapping-form');
                         mappingForm.innerHTML = '';
-    
+
+                        backendFields = data.fields || [];
+                        requiredFieldNames = backendFields.filter(f => f.required).map(f => f.value);
+
+                        // Render required fields list dynamically
+                        const reqList = document.getElementById('required-fields-list');
+                        reqList.innerHTML = '';
+                        requiredFieldNames.forEach(name => {
+                            const fieldMeta = backendFields.find(f => f.value === name);
+                            const li = document.createElement('li');
+                            li.className = 'mb-2';
+                            li.innerHTML = `<i class=\"fas fa-circle text-muted me-2\"></i>${fieldMeta ? fieldMeta.label : name}`;
+                            reqList.appendChild(li);
+                        });
+
                         // Create field info tooltips
                         const fieldInfo = {};
-                        data.fields.forEach(field => {
+                        backendFields.forEach(field => {
                             let constraints = [];
                             if (field.required) constraints.push('Required');
                             if (field.unique) constraints.push('Unique');
@@ -552,55 +564,47 @@
                                 constraints.push(`Max digits: ${field.max_digits}, Decimal places: ${field.decimal_places}`);
                             }
                             if (field.help_text) constraints.push(field.help_text);
-                            if (field.validators && field.validators.length > 0) {
-                                field.validators.forEach(validator => {
-                                    if (validator.name === 'MinValueValidator') {
-                                        constraints.push(`Minimum value: ${validator.value}`);
-                                    }
-                                    // Add other validator types as needed
-                                });
-                            }
                             fieldInfo[field.value] = constraints;
                         });
-    
+
                         data.columns.forEach(column => {
                             const div = document.createElement('div');
                             div.className = 'mb-3';
-    
+
                             // Check if there's an automatic mapping for this column
                             const autoMapped = data.automatic_mapping[column];
                             
                             const labelHtml = `
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="form-label mb-0">${column}</label>
-                                    ${autoMapped ? '<span class="badge bg-success">Auto-mapped</span>' : ''}
+                                <div class=\"d-flex justify-content-between align-items-center mb-2\">
+                                    <label class=\"form-label mb-0\">${column}</label>
+                                    ${autoMapped ? '<span class=\"badge bg-success\">Auto-mapped</span>' : ''}
                                 </div>
                             `;
-    
+
                             const selectHtml = `
-                                <select class="form-select" name="mapping_${column}" onchange="validateMapping()">
-                                    <option value="">-- Select Field --</option>
-                                    ${data.fields.map(field => {
+                                <select class=\"form-select\" name=\"mapping_${column}\" onchange=\"validateMapping()\">
+                                    <option value=\"\">-- Select Field --</option>
+                                    ${backendFields.map(field => {
                                         const constraints = fieldInfo[field.value];
                                         const constraintText = constraints.length > 0 ? ` (${constraints.join(', ')})` : '';
                                         return `
-                                            <option value="${field.value}" 
+                                            <option value=\"${field.value}\" 
                                                     ${autoMapped === field.value ? 'selected' : ''}
-                                                    ${field.required ? 'data-required="true"' : ''}>
+                                                    ${field.required ? 'data-required=\"true\"' : ''}>
                                                 ${field.label}${constraintText}
                                             </option>
                                         `;
                                     }).join('')}
                                 </select>
                             `;
-    
+
                             div.innerHTML = labelHtml + selectHtml;
                             mappingForm.appendChild(div);
                         });
-    
+
                         // Update required fields indicators
                         validateMapping();
-    
+
                         // Show summary of automatic mappings
                         const autoMappedCount = Object.keys(data.automatic_mapping).length;
                         if (autoMappedCount > 0) {
@@ -617,7 +621,7 @@
     
         // Validate mapping selections
         function validateMapping() {
-            const requiredFields = ['v_account_number', 'fic_mis_date', 'v_prod_code', 'n_eop_bal'];
+            const requiredFields = requiredFieldNames;
             const mappingSelects = document.querySelectorAll('#mapping-form select');
             const selectedValues = Array.from(mappingSelects).map(select => select.value);
             
@@ -678,36 +682,42 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    const table = document.getElementById('preview-table');
-                    table.innerHTML = '';
-    
-                    // Add headers
-                    const thead = document.createElement('thead');
-                    thead.innerHTML = `
-                        <tr class="table-light">
-                            ${Object.keys(data.preview[0]).map(key => 
-                                `<th class="text-nowrap">${key}</th>`
+                const table = document.getElementById('preview-table');
+                table.innerHTML = '';
+
+                if (!data.success) {
+                    showAlert(data.error, 'danger');
+                    return;
+                }
+
+                if (!data.preview || data.preview.length === 0) {
+                    table.innerHTML = '<tbody><tr><td class="text-muted">No rows to preview</td></tr></tbody>';
+                    return;
+                }
+
+                // Add headers
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr class="table-light">
+                        ${Object.keys(data.preview[0]).map(key => 
+                            `<th class="text-nowrap">${key}</th>`
+                        ).join('')}
+                    </tr>
+                `;
+                table.appendChild(thead);
+
+                // Add data rows
+                const tbody = document.createElement('tbody');
+                data.preview.forEach(row => {
+                    tbody.innerHTML += `
+                        <tr>
+                            ${Object.values(row).map(value => 
+                                `<td>${value !== null ? value : ''}</td>`
                             ).join('')}
                         </tr>
                     `;
-                    table.appendChild(thead);
-    
-                    // Add data rows
-                    const tbody = document.createElement('tbody');
-                    data.preview.forEach(row => {
-                        tbody.innerHTML += `
-                            <tr>
-                                ${Object.values(row).map(value => 
-                                    `<td>${value !== null ? value : ''}</td>`
-                                ).join('')}
-                            </tr>
-                        `;
-                    });
-                    table.appendChild(tbody);
-                } else {
-                    showAlert(data.error, 'danger');
-                }
+                });
+                table.appendChild(tbody);
             })
             .catch(error => {
                 showAlert('Error loading preview. Please try again.', 'danger');
@@ -717,7 +727,10 @@
         // Import handling
         function startImport() {
             const mappingData = getMappingData();
-    
+
+            // Start polling progress immediately
+            startProgressPolling();
+
             fetch('/staging/schedule/import/', {
                 method: 'POST',
                 headers: {
@@ -731,15 +744,44 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    updateProgress(data);
-                } else {
+                if (!data.success) {
+                    stopProgressPolling();
                     showAlert(data.error, 'danger');
                 }
             })
             .catch(error => {
+                stopProgressPolling();
                 showAlert('Error during import. Please try again.', 'danger');
             });
+        }
+
+        let progressInterval = null;
+        function startProgressPolling() {
+            if (!uploadedFileId) return;
+            stopProgressPolling();
+            // Immediate fetch
+            fetch(`/staging/schedule/import/?file_id=${uploadedFileId}`)
+                .then(r => r.json())
+                .then(d => { if (d.success) updateProgress(d); });
+            progressInterval = setInterval(() => {
+                fetch(`/staging/schedule/import/?file_id=${uploadedFileId}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            updateProgress(d);
+                            if (d.progress >= 100) {
+                                stopProgressPolling();
+                            }
+                        }
+                    })
+                    .catch(() => {});
+            }, 800);
+        }
+        function stopProgressPolling() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
         }
     
         function updateProgress(data) {

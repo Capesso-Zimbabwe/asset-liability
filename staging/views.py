@@ -8,18 +8,19 @@ from django.conf import settings
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+from django.core.cache import cache
 
-from alm_app.models import ProductBalance, Stg_Common_Coa_Master, Stg_Product_Master
+from alm_app.models import ProductBalance, Stg_Common_Coa_Master, Stg_Exchange_Rate, Stg_Product_Master, stg_party_master
+
 from .models import (
     LoanContract, OverdraftContract, LoanPaymentSchedule,
     Investment, FirstDayProduct, CreditLine
 )
-from datetime import datetime
+from datetime import datetime, date
 import uuid
 import json
 from django.db import models
-from django.db import transaction
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 # Generic file handling functions
 def handle_uploaded_file(file):
@@ -53,104 +54,107 @@ def read_file_data(file_path):
         return pd.read_csv(file_path)
     return pd.read_excel(file_path)
 
-# Helper utilities for cleaning imported data
-def _quantize_for_places(decimal_places: int) -> Decimal:
-    """Return a Decimal quantizer for the given number of decimal places."""
-    if decimal_places <= 0:
-        return Decimal('1')
-    return Decimal('0.' + ('0' * (decimal_places - 1)) + '1')
-
-def _round_decimal_fields_in_row(row: pd.Series, model_class):
-    """Round values for DecimalFields in the given row according to model field decimal_places."""
+# Helper utilities for mapping and coercion
+def get_model_field_map(model_class):
+    """Return a dict of field_name -> field for non auto-created fields."""
+    field_map = {}
     for field in model_class._meta.fields:
-        if isinstance(field, models.DecimalField):
-            field_name = field.name
-            if field_name in row and pd.notna(row[field_name]):
-                value = row[field_name]
-                # Remove grouping commas if present and cast to string for consistent Decimal parsing
-                if isinstance(value, str):
-                    value = value.replace(',', '').strip()
-                try:
-                    quantizer = _quantize_for_places(getattr(field, 'decimal_places', 0) or 0)
-                    row[field_name] = Decimal(str(value)).quantize(quantizer, rounding=ROUND_HALF_UP)
-                except (InvalidOperation, ValueError, TypeError):
-                    # Leave as-is; model validation will surface issues for truly invalid values
-                    pass
-
-def _clean_numeric_string(value: str) -> str:
-    """Normalize numeric-looking strings: remove thousands separators and currency, handle (neg) format."""
-    s = value.strip()
-    if not s:
-        return s
-    # Handle parentheses indicating negative numbers, e.g. (1,234.56)
-    negative = s.startswith('(') and s.endswith(')')
-    if negative:
-        s = s[1:-1]
-    # Remove currency symbols and spaces
-    s = s.replace('$', '').replace('€', '').replace('£', '').replace('ZWL', '').replace('ZAR', '')
-    s = s.replace(' ', '')
-    # Remove thousands separators
-    s = s.replace(',', '')
-    if negative:
-        s = '-' + s
-    return s
-
-def _normalize_row_values(row: pd.Series, model_class):
-    """Normalize strings, numbers, and booleans in a row based on model field types."""
-    truthy = {'y', 'yes', 'true', '1', 't'}
-    falsy = {'n', 'no', 'false', '0', 'f'}
-
-    for field in model_class._meta.fields:
-        field_name = field.name
-        if field_name not in row or pd.isna(row[field_name]):
+        if getattr(field, 'auto_created', False):
             continue
+        field_map[field.name] = field
+    return field_map
 
-        value = row[field_name]
+def normalize_null(value):
+    """Convert empty-like values and NaN to None."""
+    if value is None:
+        return None
+    if isinstance(value, float) and pd.isna(value):
+        return None
+    if isinstance(value, str) and value.strip() in ['', 'null', 'None', 'NaN']:
+        return None
+    return value
 
-        # Trim and nullify empty strings for any text type
-        if isinstance(field, (models.CharField, models.TextField)):
-            if isinstance(value, str):
-                v = value.strip()
-                row[field_name] = v if v else None
-            continue
-
-        # Integer fields
-        if isinstance(field, (models.IntegerField, models.BigIntegerField, models.PositiveIntegerField)):
+def parse_date_flexibly(value):
+    """Parse many date representations to a date, avoiding dayfirst warnings.
+    Tries day-first first, then month-first, then a set of explicit formats.
+    Returns a datetime.date or None.
+    """
+    value = normalize_null(value)
+    if value is None:
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    # Try pandas with dayfirst=True then False
+    try:
+        dt = pd.to_datetime(value, errors='coerce', dayfirst=True)
+        if not pd.isna(dt):
+            return dt.date()
+    except Exception:
+        pass
+    try:
+        dt = pd.to_datetime(value, errors='coerce', dayfirst=False)
+        if not pd.isna(dt):
+            return dt.date()
+    except Exception:
+        pass
+    # Try common explicit formats
+    if isinstance(value, str):
+        value = value.strip()
+        formats = [
+            '%d/%m/%Y', '%Y-%m-%d', '%m/%d/%Y', '%d-%m-%Y', '%Y/%m/%d',
+            '%d.%m.%Y', '%m-%d-%Y', '%d %b %Y', '%d %B %Y'
+        ]
+        for fmt in formats:
             try:
-                if isinstance(value, str):
-                    value = _clean_numeric_string(value)
-                row[field_name] = int(float(value))
-            except (ValueError, TypeError):
-                # leave as-is; validation will raise
-                pass
-            continue
+                return datetime.strptime(value, fmt).date()
+            except Exception:
+                continue
+    return None
 
-        # Boolean fields
-        if isinstance(field, models.BooleanField):
-            if isinstance(value, str):
-                lowered = value.strip().lower()
-                if lowered in truthy:
-                    row[field_name] = True
-                elif lowered in falsy:
-                    row[field_name] = False
-            continue
 
-        # Float fields
-        if isinstance(field, models.FloatField):
-            try:
-                if isinstance(value, str):
-                    value = _clean_numeric_string(value)
-                row[field_name] = float(value)
-            except (ValueError, TypeError):
-                pass
-            continue
+def coerce_decimal(field, value):
+    """Coerce a value into a Decimal with the field's decimal_places using HALF_UP rounding."""
+    value = normalize_null(value)
+    if value is None or value == '':
+        return None
+    try:
+        # Allow strings with thousands separators
+        if isinstance(value, str):
+            value = value.replace(',', '').strip()
+        d = Decimal(str(value))
+        # Quantize to the field's decimal places
+        places = getattr(field, 'decimal_places', None)
+        if places is not None:
+            quant = Decimal('1').scaleb(-places)
+            d = d.quantize(quant, rounding=ROUND_HALF_UP)
+        return d
+    except (InvalidOperation, ValueError, TypeError):
+        return value
 
-        # Decimal fields handled separately for rounding
+def coerce_value_for_field(field, value):
+    """Coerce a value into the correct python type for a Django model field."""
+    value = normalize_null(value)
+    if value is None:
+        return None
+
+    try:
+        if isinstance(field, models.DateField):
+            return parse_date_flexibly(value)
         if isinstance(field, models.DecimalField):
+            return coerce_decimal(field, value)
+        if isinstance(field, models.IntegerField):
             if isinstance(value, str):
-                row[field_name] = _clean_numeric_string(value)
-            # rounding done later in _round_decimal_fields_in_row
-            continue
+                value = value.replace(',', '').strip()
+            return None if value == '' else int(float(value))
+        if isinstance(field, models.CharField):
+            return str(value)
+        # Fallback to Django's to_python
+        return field.to_python(value)
+    except Exception:
+        # On coercion error, return original; validation will catch and we will report row error
+        return value
 
 # View generators
 def create_upload_view(model_class, template_name):
@@ -187,18 +191,27 @@ def create_file_upload_view(model_class):
                     'error': 'Invalid file type. Please upload a CSV or Excel file.'
                 })
 
-            # Validate file size (10MB limit)
-            if uploaded_file.size > 10 * 1024 * 1024:
+            # Validate file size (500MB limit)
+            if uploaded_file.size > 500 * 1024 * 1024:
                 return JsonResponse({
                     'success': False,
-                    'error': 'File size exceeds 10MB limit.'
+                    'error': 'File size exceeds 500MB limit.'
                 })
 
             # Save and process file
             file_id, file_path = handle_uploaded_file(uploaded_file)
             
             try:
+                # Initialize progress ASAP (before file read)
+                cache.set(f'import_progress:{file_id}', {
+                    'progress': 1,
+                    'total': 0,
+                    'success_count': 0,
+                    'errors': []
+                }, 300)
+
                 df = read_file_data(file_path)
+                
                 if len(df.columns) < 1:
                     raise ValueError("File contains no columns")
                 
@@ -240,6 +253,8 @@ def create_columns_view(model_class):
                 # Get model fields with descriptions
                 model_fields = []
                 for field in model_class._meta.fields:
+                    if getattr(field, 'auto_created', False):
+                        continue
                     field_info = {
                         'value': field.name,
                         'label': field.verbose_name or field.name.replace('_', ' ').title(),
@@ -325,11 +340,34 @@ def create_preview_view(model_class):
             try:
                 df = read_file_data(file_path)
                 
-                # Apply mapping
-                df_mapped = df.rename(columns=mapping)
+                # Limit to first 5 rows early to keep preview fast
+                df = df.head(5)
                 
-                # Return first 5 rows as preview
-                preview_data = df_mapped.head().to_dict('records')
+                # Apply mapping and keep only mapped target columns
+                mapped_targets = [t for t in mapping.values() if t]
+                df_mapped = df.rename(columns=mapping)
+                if mapped_targets:
+                    df_mapped = df_mapped[[c for c in mapped_targets if c in df_mapped.columns]]
+
+                # Replace NaN with None for JSON
+                df_mapped = df_mapped.where(pd.notna(df_mapped), None)
+
+                # Coerce to model field types for better preview formatting
+                field_map = get_model_field_map(model_class)
+                for col in list(df_mapped.columns):
+                    field = field_map.get(col)
+                    if field is None:
+                        continue
+                    df_mapped[col] = df_mapped[col].apply(lambda v: coerce_value_for_field(field, v))
+
+                # Convert dates to ISO strings for preview
+                for col in list(df_mapped.columns):
+                    field = field_map.get(col)
+                    if isinstance(field, models.DateField):
+                        df_mapped[col] = df_mapped[col].apply(lambda d: d.isoformat() if d else None)
+                
+                # Return first 5 rows as preview (already limited)
+                preview_data = df_mapped.to_dict('records')
                 
                 return JsonResponse({
                     'success': True,
@@ -352,6 +390,16 @@ def create_import_view(model_class):
     @login_required
     @csrf_protect
     def view(request):
+        # Progress polling support
+        if request.method == 'GET':
+            file_id = request.GET.get('file_id')
+            if not file_id:
+                return JsonResponse({'success': False, 'error': 'No file ID provided'})
+            progress = cache.get(f'import_progress:{file_id}', None)
+            if progress is None:
+                return JsonResponse({'success': True, 'progress': 0, 'total': 0, 'success_count': 0, 'errors': []})
+            return JsonResponse({'success': True, **progress})
+
         if request.method != 'POST':
             return JsonResponse({
                 'success': False,
@@ -377,55 +425,133 @@ def create_import_view(model_class):
                 })
 
             try:
+                # Initialize progress ASAP (before file read)
+                cache.set(f'import_progress:{file_id}', {
+                    'progress': 1,
+                    'total': 0,
+                    'success_count': 0,
+                    'errors': []
+                }, 300)
+
                 df = read_file_data(file_path)
                 
-                # Apply mapping
+                # Apply mapping and keep only mapped target columns
+                mapped_targets = [t for t in mapping.values() if t]
                 df_mapped = df.rename(columns=mapping)
-                
+                if mapped_targets:
+                    df_mapped = df_mapped[[c for c in mapped_targets if c in df_mapped.columns]]
+
+                # Prepare model field map
+                field_map = get_model_field_map(model_class)
+
+                # Coerce values per field and handle nulls
+                for col in list(df_mapped.columns):
+                    field = field_map.get(col)
+                    if field is None:
+                        # Drop columns not in model
+                        df_mapped.drop(columns=[col], inplace=True)
+                        continue
+                    df_mapped[col] = df_mapped[col].apply(lambda v: coerce_value_for_field(field, v))
+
                 total_rows = len(df_mapped)
                 errors = []
-                instances = []
+                instances_to_save = []
 
-                # First pass: transform and validate every row; do not save yet
+                # Initialize progress in cache
+                cache.set(f'import_progress:{file_id}', {
+                    'progress': 2,
+                    'total': total_rows,
+                    'success_count': 0,
+                    'errors': []
+                }, 300)
+
+                def update_progress(processed: int, success_count: int, errors_list):
+                    progress_pct = 0 if total_rows == 0 else min(90, int(processed / total_rows * 90))
+                    cache.set(f'import_progress:{file_id}', {
+                        'progress': progress_pct,
+                        'total': total_rows,
+                        'success_count': success_count,
+                        'errors': errors_list[:50],
+                    }, 300)
+
+                # Validate each row and build instances
+                success_count = 0
                 for index, row in df_mapped.iterrows():
                     try:
-                        # Normalize by field types
-                        _normalize_row_values(row, model_class)
-
-                        # Convert date fields
-                        date_fields = [f.name for f in model_class._meta.fields if isinstance(f, models.DateField)]
-                        for field in date_fields:
-                            if field in row and pd.notna(row[field]):
-                                row[field] = pd.to_datetime(row[field]).date()
-
-                        # Round DecimalField values to the model's decimal_places
-                        _round_decimal_fields_in_row(row, model_class)
-
-                        # Build instance and validate
-                        instance = model_class(**row.to_dict())
+                        instance_data = {}
+                        for field_name, field in field_map.items():
+                            if field_name in row.index:
+                                instance_data[field_name] = row[field_name]
+                        instance = model_class(**instance_data)
                         instance.full_clean()
-                        instances.append(instance)
+                        instances_to_save.append(instance)
+                        success_count += 1
+                    except ValidationError as ve:
+                        idt_acc = instance_data.get('v_account_number') if 'instance_data' in locals() else None
+                        idt_fic = instance_data.get('fic_mis_date') if 'instance_data' in locals() else None
+                        idt = []
+                        if idt_acc: idt.append(f"Account: {idt_acc}")
+                        if idt_fic: idt.append(f"FIC MIS Date: {idt_fic}")
+                        idt_text = f" ({' | '.join(idt)})" if idt else ''
+                        if hasattr(ve, 'message_dict'):
+                            parts = []
+                            for fld, msgs in ve.message_dict.items():
+                                if isinstance(msgs, (list, tuple)):
+                                    msg_text = ', '.join(msgs)
+                                else:
+                                    msg_text = str(msgs)
+                                if fld != '__all__':
+                                    val = instance_data.get(fld, None)
+                                    val_str = val.isoformat() if hasattr(val, 'isoformat') else (str(val) if val is not None else '')
+                                    parts.append(f"{fld}: {msg_text} (value: {val_str})")
+                                else:
+                                    parts.append(f"{fld}: {msg_text}")
+                            msg_text_full = '; '.join(parts)
+                        else:
+                            msgs = getattr(ve, 'messages', [str(ve)])
+                            msg_text_full = '; '.join(msgs)
+                        errors.append(f"Row {index + 1}{idt_text}: {msg_text_full}")
                     except Exception as e:
                         errors.append(f"Row {index + 1}: {str(e)}")
 
-                # If any validation errors, abort without saving any row
-                if errors:
+                    # Periodically update progress every 200 rows
+                    if (index + 1) % 200 == 0:
+                        update_progress(index + 1, success_count, errors)
+
+                # Final validation progress update (set to 90%)
+                update_progress(total_rows, success_count, errors)
+
+                # Perform save
+                if len(errors) == 0:
+                    from django.db import transaction
                     try:
-                        os.remove(file_path)
-                    except Exception:
-                        pass
-                    return JsonResponse({
-                        'success': False,
+                        with transaction.atomic():
+                            model_class.objects.bulk_create(instances_to_save, batch_size=1000)
+                        # Final progress to 100%
+                        cache.set(f'import_progress:{file_id}', {
+                            'progress': 100,
+                            'total': total_rows,
+                            'success_count': total_rows,
+                            'errors': []
+                        }, 300)
+                        success_count = total_rows
+                    except Exception as e:
+                        errors.append(f"Transaction save error: {str(e)}")
+                        cache.set(f'import_progress:{file_id}', {
+                            'progress': 100,
+                            'total': total_rows,
+                            'success_count': 0,
+                            'errors': errors[:50]
+                        }, 300)
+                        success_count = 0
+                else:
+                    # Errors found; finalize progress
+                    cache.set(f'import_progress:{file_id}', {
+                        'progress': 100,
                         'total': total_rows,
                         'success_count': 0,
-                        'errors': errors,
-                        'progress': 100,
-                        'message': 'Import aborted. No records were saved due to validation errors.'
-                    })
-
-                # Second pass: save all instances atomically
-                with transaction.atomic():
-                    model_class.objects.bulk_create(instances)
+                        'errors': errors[:50]
+                    }, 300)
 
                 # Clean up temporary file
                 try:
@@ -436,8 +562,8 @@ def create_import_view(model_class):
                 return JsonResponse({
                     'success': True,
                     'total': total_rows,
-                    'success_count': total_rows,
-                    'errors': [],
+                    'success_count': success_count,
+                    'errors': errors,
                     'progress': 100
                 })
             except Exception as e:
@@ -642,6 +768,26 @@ upload_coa_file = create_file_upload_view(Stg_Common_Coa_Master)
 get_coa_columns = create_columns_view(Stg_Common_Coa_Master)
 preview_coa_data = create_preview_view(Stg_Common_Coa_Master)
 import_coa_data = create_import_view(Stg_Common_Coa_Master)
+
+# Exchange Rate views
+load_rates_view = create_upload_view(
+    Stg_Exchange_Rate,
+    'staging/rates/load_rates.html'
+)
+upload_rates_file = create_file_upload_view(Stg_Exchange_Rate)
+get_rates_columns = create_columns_view(Stg_Exchange_Rate)
+preview_rates_data = create_preview_view(Stg_Exchange_Rate)
+import_rates_data = create_import_view(Stg_Exchange_Rate)
+
+# Customer (Party Master) views
+load_customer_view = create_upload_view(
+    stg_party_master,
+    'staging/customer/load_customer.html'
+)
+upload_customer_file = create_file_upload_view(stg_party_master)
+get_customer_columns = create_columns_view(stg_party_master)
+preview_customer_data = create_preview_view(stg_party_master)
+import_customer_data = create_import_view(stg_party_master)
 
 # View functions for displaying data
 @login_required
@@ -876,7 +1022,7 @@ def delete_coa(request, pk):
             return redirect('staging:view_coa')
         except Exception as e:
             messages.error(request, f'Error deleting COA: {e}')
-            return redirect('staging:view_coa')
+            return redirect('staging/coa/delete_coa.html', context)
     
     context = {
         'coa': coa,

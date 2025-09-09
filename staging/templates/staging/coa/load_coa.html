@@ -108,7 +108,7 @@
                     <button class="btn  px-4" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';" onclick="document.getElementById('file-input').click()">
                         Select File
                     </button>
-                    <p class="text-muted small mt-3 mb-0">Supported formats: Excel, CSV (Max size: 10MB)</p>
+                    <p class="text-muted small mt-3 mb-0">Supported formats: Excel, CSV (Max size: 500MB)</p>
                 </div>
     
                 <!-- File Details -->
@@ -134,13 +134,7 @@
                     <h6 class="alert-heading mb-3">
                         <i class="fas fa-info-circle me-2"></i>Required Fields
                     </h6>
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Common COA Code</li>
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Common COA Name</li>
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Common COA Description</li>
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Account Type</li>
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>FIC MIS Date</li>
-                    </ul>
+                    <ul class="list-unstyled mb-0" id="required-fields-list"></ul>
                 </div>
             </div>
     
@@ -330,9 +324,9 @@
                 return;
             }
     
-            // Check file size (10MB limit)
-            if (file.size > 10 * 1024 * 1024) {
-                showAlert('File size exceeds 10MB limit.', 'danger');
+            // Check file size (500MB limit)
+            if (file.size > 500 * 1024 * 1024) {
+                showAlert('File size exceeds 500MB limit.', 'danger');
                 return;
             }
     
@@ -466,55 +460,62 @@
                     if (data.success) {
                         const mappingForm = document.getElementById('mapping-form');
                         mappingForm.innerHTML = '';
-    
-                        // Create field info tooltips
+
+                        // Create field info tooltips and required list
+                        const reqList = document.getElementById('required-fields-list');
+                        reqList.innerHTML = '';
+
+                        // Prepare field list/constraints
+                        const backendFields = data.fields || [];
+                        const requiredFieldNames = backendFields.filter(f => f.required).map(f => f.value);
+                        requiredFieldNames.forEach(name => {
+                            const f = backendFields.find(x => x.value === name);
+                            const li = document.createElement('li');
+                            li.className = 'mb-2';
+                            li.innerHTML = `<i class="fas fa-circle text-muted me-2"></i>${f ? f.label : name}`;
+                            reqList.appendChild(li);
+                        });
+
                         const fieldInfo = {};
-                        data.fields.forEach(field => {
-                            let constraints = [];
+                        backendFields.forEach(field => {
+                            const constraints = [];
                             if (field.required) constraints.push('Required');
                             if (field.unique) constraints.push('Unique');
                             if (field.max_length) constraints.push(`Max length: ${field.max_length}`);
-                            if (field.max_digits && field.decimal_places) {
-                                constraints.push(`Max digits: ${field.max_digits}, Decimal places: ${field.decimal_places}`);
-                            }
+                            if (field.max_digits && field.decimal_places) constraints.push(`Max digits: ${field.max_digits}, Decimal places: ${field.decimal_places}`);
                             if (field.help_text) constraints.push(field.help_text);
-                            fieldInfo[field.name] = constraints.join(', ');
+                            fieldInfo[field.value] = constraints;
                         });
-    
-                        // Create mapping rows
-                        data.fields.forEach(field => {
-                            const row = document.createElement('div');
-                            row.className = 'row mb-3';
-                            
-                            const isRequired = field.required;
-                            const requiredClass = isRequired ? 'text-danger' : '';
-                            const requiredMark = isRequired ? ' *' : '';
-                            
-                            row.innerHTML = `
-                                <div class="col-md-4">
-                                    <label class="form-label ${requiredClass}">
-                                        ${field.verbose_name}${requiredMark}
-                                        ${fieldInfo[field.name] ? `<i class="fas fa-info-circle text-muted ms-1" title="${fieldInfo[field.name]}"></i>` : ''}
-                                    </label>
-                                </div>
-                                <div class="col-md-8">
-                                    <select class="form-select mapping-select" name="${field.name}" ${isRequired ? 'required' : ''}>
-                                        <option value="">-- Skip this field --</option>
-                                        ${data.columns.map(col => `<option value="${col}">${col}</option>`).join('')}
-                                    </select>
+
+                        // Build per-file-column mapping rows with auto-mapped badge
+                        data.columns.forEach(column => {
+                            const div = document.createElement('div');
+                            div.className = 'mb-3';
+                            const autoMapped = data.automatic_mapping[column];
+                            const labelHtml = `
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label mb-0">${column}</label>
+                                    ${autoMapped ? '<span class="badge bg-success">Auto-mapped</span>' : ''}
                                 </div>
                             `;
-                            mappingForm.appendChild(row);
+                            const selectHtml = `
+                                <select class="form-select" name="mapping_${column}" onchange="validateMapping()">
+                                    <option value="">-- Select Field --</option>
+                                    ${backendFields.map(field => {
+                                        const constraints = fieldInfo[field.value];
+                                        const t = constraints.length > 0 ? ` (${constraints.join(', ')})` : '';
+                                        return `
+                                            <option value="${field.value}" ${autoMapped === field.value ? 'selected' : ''} ${field.required ? 'data-required="true"' : ''}>
+                                                ${field.label}${t}
+                                            </option>
+                                        `;
+                                    }).join('')}
+                                </select>
+                            `;
+                            div.innerHTML = labelHtml + selectHtml;
+                            mappingForm.appendChild(div);
                         });
-    
-                        // Auto-map columns based on similarity
-                        autoMapColumns(data.fields, data.columns);
-                        
-                        // Add change event listeners
-                        document.querySelectorAll('.mapping-select').forEach(select => {
-                            select.addEventListener('change', validateMapping);
-                        });
-                        
+
                         validateMapping();
                     } else {
                         showAlert(data.error || 'Error loading column mapping.', 'danger');
@@ -528,17 +529,17 @@
     
         function autoMapColumns(fields, columns) {
             fields.forEach(field => {
-                const select = document.querySelector(`select[name="${field.name}"]`);
+                const select = document.querySelector(`select[name="${field.value}"]`);
                 if (select) {
-                    // Try exact match first
+                    // Try exact match first using backend-provided keys
                     let matchedColumn = columns.find(col => 
-                        col.toLowerCase() === field.name.toLowerCase() ||
-                        col.toLowerCase() === field.verbose_name.toLowerCase()
+                        col.toLowerCase() === field.value.toLowerCase() ||
+                        col.toLowerCase() === (field.label || '').toLowerCase()
                     );
                     
                     // Try partial match
                     if (!matchedColumn) {
-                        const fieldWords = field.name.toLowerCase().split('_');
+                        const fieldWords = field.value.toLowerCase().split('_');
                         matchedColumn = columns.find(col => {
                             const colWords = col.toLowerCase().split(/[\s_-]+/);
                             return fieldWords.some(word => colWords.includes(word));
@@ -553,14 +554,13 @@
         }
     
         function validateMapping() {
-            const requiredSelects = document.querySelectorAll('.mapping-select[required]');
-            const allMapped = Array.from(requiredSelects).every(select => select.value);
-            
-            if (allMapped) {
-                enableNextButton();
-            } else {
-                disableNextButton();
-            }
+            const mappingSelects = document.querySelectorAll('#mapping-form select');
+            const selectedValues = Array.from(mappingSelects).map(s => s.value);
+            const backendRequired = (window.backendFieldsForCoa || []).filter(f => f.required).map(f => f.value);
+            const allRequiredMapped = backendRequired.length === 0 || backendRequired.every(f => selectedValues.includes(f));
+            const duplicates = selectedValues.filter(v => v !== '').filter((v, i, self) => self.indexOf(v) !== i);
+            if (duplicates.length > 0) { disableNextButton(); return; }
+            if (allRequiredMapped) enableNextButton(); else disableNextButton();
         }
     
         function loadPreview() {
@@ -570,26 +570,29 @@
             }
     
             // Get mapping data
-            const mappingData = {};
-            document.querySelectorAll('.mapping-select').forEach(select => {
-                if (select.value) {
-                    mappingData[select.name] = select.value;
-                }
-            });
+            const mappingData = getMappingData();
     
-            fetch(`/staging/coa/preview/${uploadedFileId}/`, {
+            const table = document.getElementById('preview-table');
+            fetch(`/staging/coa/preview/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({mapping: mappingData})
+                body: JSON.stringify({
+                    file_id: uploadedFileId,
+                    mapping: mappingData
+                })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    const table = document.getElementById('preview-table');
                     table.innerHTML = '';
+                    
+                    if (!data.preview || data.preview.length === 0) {
+                        table.innerHTML = '<tbody><tr><td class="text-muted">No rows to preview</td></tr></tbody>';
+                        return;
+                    }
                     
                     // Create header
                     const thead = document.createElement('thead');
@@ -604,7 +607,7 @@
                     
                     // Create body
                     const tbody = document.createElement('tbody');
-                    data.preview.slice(0, 10).forEach(row => { // Show first 10 rows
+                    data.preview.slice(0, 10).forEach(row => {
                         const tr = document.createElement('tr');
                         Object.values(row).forEach(value => {
                             const td = document.createElement('td');
@@ -617,7 +620,7 @@
                     
                     enableNextButton();
                 } else {
-                    table.innerHTML = '<tr><td colspan="100%" class="text-center">No data to preview</td></tr>';
+                    table.innerHTML = '<tbody><tr><td class="text-center text-muted">No data to preview</td></tr></tbody>';
                     disableNextButton();
                 }
             })
@@ -633,55 +636,96 @@
                 showAlert('No file uploaded.', 'danger');
                 return;
             }
-    
+
             // Get mapping data
-            const mappingData = {};
-            document.querySelectorAll('.mapping-select').forEach(select => {
-                if (select.value) {
-                    mappingData[select.name] = select.value;
-                }
-            });
-    
-            fetch(`/staging/coa/import/${uploadedFileId}/`, {
+            const mappingData = getMappingData();
+
+            // Start progress polling immediately
+            startProgressPolling();
+
+            fetch(`/staging/coa/import/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({mapping: mappingData})
+                body: JSON.stringify({
+                    file_id: uploadedFileId,
+                    mapping: mappingData
+                })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    // Update progress
-                    document.getElementById('total-rows').textContent = data.total;
-                    document.getElementById('success-count').textContent = data.success_count;
-                    document.getElementById('error-count').textContent = data.error_count;
-                    
-                    const percentage = Math.round((data.success_count / data.total) * 100);
-                    document.getElementById('progress-percentage').textContent = `${percentage}%`;
-                    document.getElementById('progress').style.width = `${percentage}%`;
-                    
-                    if (data.errors && data.errors.length > 0) {
-                        const errorList = document.getElementById('error-list');
-                        errorList.classList.remove('d-none');
-                        errorList.innerHTML = '<h6>Import Errors:</h6><ul>' + 
-                            data.errors.map(error => `<li>${error}</li>`).join('') + '</ul>';
-                    }
-                    
-                    // Show success modal if all imported successfully
-                    if (data.error_count === 0) {
-                        const modal = new bootstrap.Modal(document.getElementById('success-modal'));
-                        modal.show();
-                    }
-                } else {
-                    showAlert(data.error || 'Error during import.', 'danger');
+                if (!data.success) {
+                    stopProgressPolling();
+                    showAlert('Error during import.', 'danger');
                 }
+                // Progress will be driven by polling
             })
             .catch(error => {
                 console.error('Import error:', error);
+                stopProgressPolling();
                 showAlert('Error during import.', 'danger');
             });
+        }
+
+        let progressInterval = null;
+        function startProgressPolling() {
+            if (!uploadedFileId) return;
+            stopProgressPolling();
+            // Immediate fetch
+            fetch(`/staging/coa/import/?file_id=${uploadedFileId}`)
+                .then(r => r.json())
+                .then(d => { if (d.success) updateProgress(d); });
+            progressInterval = setInterval(() => {
+                fetch(`/staging/coa/import/?file_id=${uploadedFileId}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            updateProgress(d);
+                            if (d.progress >= 100) {
+                                stopProgressPolling();
+                            }
+                        }
+                    })
+                    .catch(() => {});
+            }, 800);
+        }
+        function stopProgressPolling() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+
+        function updateProgress(data) {
+            const progressEl = document.getElementById('progress');
+            const pctEl = document.getElementById('progress-percentage');
+            const totalEl = document.getElementById('total-rows');
+            const successEl = document.getElementById('success-count');
+            const errorEl = document.getElementById('error-count');
+
+            progressEl.style.width = `${data.progress}%`;
+            pctEl.textContent = `${data.progress}%`;
+            totalEl.textContent = data.total || 0;
+            successEl.textContent = data.success_count || 0;
+            errorEl.textContent = (data.errors || []).length;
+
+            if (data.errors && data.errors.length > 0) {
+                const errorList = document.getElementById('error-list');
+                errorList.classList.remove('d-none');
+                errorList.innerHTML = `
+                    <h6 class="alert-heading mb-2">Import Errors</h6>
+                    <ul class="mb-0">
+                        ${data.errors.map(error => `<li>${error}</li>`).join('')}
+                    </ul>
+                `;
+            }
+
+            if (data.progress >= 100) {
+                const modal = new bootstrap.Modal(document.getElementById('success-modal'));
+                modal.show();
+            }
         }
 
         function viewContracts() {
@@ -690,6 +734,16 @@
 
         function uploadAnother() {
             window.location.reload();
+        }
+
+        function getMappingData() {
+            const mappingData = {};
+            document.querySelectorAll('#mapping-form select').forEach(select => {
+                if (select.value) {
+                    mappingData[select.name] = select.value;
+                }
+            });
+            return mappingData;
         }
     </script>
     {% endblock %}

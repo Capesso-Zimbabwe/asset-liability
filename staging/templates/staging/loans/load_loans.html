@@ -108,7 +108,7 @@
                     <button class="btn px-4" onclick="document.getElementById('file-input').click()" style="background-color:#0B0920;color:#fff;border:1px solid #0B0920;" onmouseover="this.style.backgroundColor='#231E36'; this.style.borderColor='#231E36';" onmouseout="this.style.backgroundColor='#0B0920'; this.style.borderColor='#0B0920';">
                         Select File
                     </button>
-                    <p class="text-muted small mt-3 mb-0">Supported formats: Excel, CSV (Max size: 10MB)</p>
+                    <p class="text-muted small mt-3 mb-0">Supported formats: Excel, CSV (Max size: 500MB)</p>
                 </div>
 
                 <!-- File Details -->
@@ -134,11 +134,8 @@
                     <h6 class="alert-heading mb-3">
                         <i class="fas fa-info-circle me-2"></i>Required Fields
                     </h6>
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Account Number</li>
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>FIC MIS Date</li>
-                        <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Product Code</li>
-                        <li><i class="fas fa-circle text-muted me-2"></i>Balance</li>
+                    <ul class="list-unstyled mb-0" id="required-fields-list">
+                        <!-- Populated dynamically -->
                     </ul>
                 </div>
             </div>
@@ -279,6 +276,9 @@
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         let uploadedFileId = null;
+        // Dynamic fields cache
+        let backendFields = [];
+        let requiredFieldNames = [];
 
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, preventDefaults, false);
@@ -333,9 +333,9 @@
                 return;
             }
 
-            // Check file size (10MB limit)
-            if (file.size > 10 * 1024 * 1024) {
-                showAlert('File size exceeds 10MB limit.', 'danger');
+            // Check file size (500MB limit)
+            if (file.size > 500 * 1024 * 1024) {
+                showAlert('File size exceeds 500MB limit.', 'danger');
                 return;
             }
 
@@ -471,9 +471,23 @@
                         const mappingForm = document.getElementById('mapping-form');
                         mappingForm.innerHTML = '';
 
+                        backendFields = data.fields || [];
+                        requiredFieldNames = backendFields.filter(f => f.required).map(f => f.value);
+
+                        // Render required fields list
+                        const reqList = document.getElementById('required-fields-list');
+                        reqList.innerHTML = '';
+                        requiredFieldNames.forEach(name => {
+                            const fieldMeta = backendFields.find(f => f.value === name);
+                            const li = document.createElement('li');
+                            li.className = 'mb-2';
+                            li.innerHTML = `<i class="fas fa-circle text-muted me-2"></i>${fieldMeta ? fieldMeta.label : name}`;
+                            reqList.appendChild(li);
+                        });
+
                         // Create field info tooltips
                         const fieldInfo = {};
-                        data.fields.forEach(field => {
+                        backendFields.forEach(field => {
                             let constraints = [];
                             if (field.required) constraints.push('Required');
                             if (field.unique) constraints.push('Unique');
@@ -482,14 +496,6 @@
                                 constraints.push(`Max digits: ${field.max_digits}, Decimal places: ${field.decimal_places}`);
                             }
                             if (field.help_text) constraints.push(field.help_text);
-                            if (field.validators && field.validators.length > 0) {
-                                field.validators.forEach(validator => {
-                                    if (validator.name === 'MinValueValidator') {
-                                        constraints.push(`Minimum value: ${validator.value}`);
-                                    }
-                                    // Add other validator types as needed
-                                });
-                            }
                             fieldInfo[field.value] = constraints;
                         });
 
@@ -510,7 +516,7 @@
                             const selectHtml = `
                                 <select class="form-select" name="mapping_${column}" onchange="validateMapping()">
                                     <option value="">-- Select Field --</option>
-                                    ${data.fields.map(field => {
+                                    ${backendFields.map(field => {
                                         const constraints = fieldInfo[field.value];
                                         const constraintText = constraints.length > 0 ? ` (${constraints.join(', ')})` : '';
                                         return `
@@ -547,7 +553,8 @@
 
         // Validate mapping selections
         function validateMapping() {
-            const requiredFields = ['v_account_number', 'fic_mis_date', 'v_prod_code', 'n_eop_bal'];
+            // A field is required only if backend marks it required
+            const requiredFields = requiredFieldNames;
             const mappingSelects = document.querySelectorAll('#mapping-form select');
             const selectedValues = Array.from(mappingSelects).map(select => select.value);
             
@@ -612,6 +619,11 @@
                     const table = document.getElementById('preview-table');
                     table.innerHTML = '';
 
+                    if (!data.preview || data.preview.length === 0) {
+                        table.innerHTML = '<tbody><tr><td class="text-muted">No rows to preview</td></tr></tbody>';
+                        return;
+                    }
+
                     // Add headers
                     const thead = document.createElement('thead');
                     thead.innerHTML = `
@@ -648,6 +660,9 @@
         function startImport() {
             const mappingData = getMappingData();
 
+            // Start polling progress immediately
+            startProgressPolling();
+
             fetch('/staging/loans/import/', {
                 method: 'POST',
                 headers: {
@@ -661,15 +676,45 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    updateProgress(data);
-                } else {
+                if (!data.success) {
+                    stopProgressPolling();
                     showAlert(data.error, 'danger');
                 }
+                // Progress UI will be updated via polling
             })
             .catch(error => {
+                stopProgressPolling();
                 showAlert('Error during import. Please try again.', 'danger');
             });
+        }
+
+        let progressInterval = null;
+        function startProgressPolling() {
+            if (!uploadedFileId) return;
+            stopProgressPolling();
+            // Immediate fetch
+            fetch(`/staging/loans/import/?file_id=${uploadedFileId}`)
+                .then(r => r.json())
+                .then(d => { if (d.success) updateProgress(d); });
+            progressInterval = setInterval(() => {
+                fetch(`/staging/loans/import/?file_id=${uploadedFileId}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            updateProgress(d);
+                            if (d.progress >= 100) {
+                                stopProgressPolling();
+                            }
+                        }
+                    })
+                    .catch(() => {});
+            }, 800);
+        }
+        function stopProgressPolling() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
         }
 
         function updateProgress(data) {
@@ -718,4 +763,5 @@
         }
     </script>
     {% endblock %}
+
 
